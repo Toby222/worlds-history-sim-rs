@@ -8,5 +8,7 @@ edition = "2021"
 [dependencies.save]
 path = "save"
 
-[dependencies.serde-xml-rs]
-version = "0.5.1"
+[dependencies.bevy]
+version = "0.8"
+default-features = false
+features = ["bevy_asset", "bevy_winit", "bevy_scene", "render"]

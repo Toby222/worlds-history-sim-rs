@@ -3,8 +3,13 @@ name = "save"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies.noise]
+version = "0.7.0"
+default-features = false
 
-[dependencies.serde]
-version = "1.0.144"
-features = ["derive"]
+[dependencies.rand]
+version = "0.8.5"
+
+[dependencies.bevy]
+version = "0.8"
+default-features = false
