@@ -177,18 +177,23 @@ impl World {
                 let value_5 =
                     self.random_noise_from_polar_coordinates(alpha, beta, RADIUS_5, offset_5)?;
 
-                let value = self.mountain_range_noise_from_random_noise(mix_values(
-                    value_1,
-                    value_2,
-                    Self::MOUNTAIN_RANGE_MIX_FACTOR,
-                )) * mix_values(1.0, continent_value, 0.3);
-
-                let value = mix_values(value, continent_value, Self::CONTINENT_FACTOR);
+                let value = continent_value;
                 let value = mix_values(value, value_3, Self::TERRAIN_NOISE_FACTOR_1);
                 let value = value * mix_values(1.0, value_4, Self::TERRAIN_NOISE_FACTOR_2);
-                let value = value * mix_values(1.0, value_5, Self::TERRAIN_NOISE_FACTOR_3);
+                let value =
+                    value * mix_values(1.0, value_5, Self::TERRAIN_NOISE_FACTOR_3) * 0.2 + 0.4;
 
-                self.terrain[y][x].altitude = Self::calculate_altitude(value);
+                let mut value_mountain =
+                    mix_values(value_1, value_2, Self::MOUNTAIN_RANGE_MIX_FACTOR);
+                value_mountain = self.mountain_range_noise_from_random_noise(value_mountain);
+                value_mountain = mix_values(value_mountain, value_3, Self::TERRAIN_NOISE_FACTOR_1);
+                value_mountain =
+                    value_mountain * mix_values(1.0, value_4, Self::TERRAIN_NOISE_FACTOR_2);
+                value_mountain =
+                    value_mountain * mix_values(1.0, value_5, Self::TERRAIN_NOISE_FACTOR_3);
+                value_mountain = 2.0 * value_mountain * value;
+
+                self.terrain[y][x].altitude = Self::calculate_altitude(value_mountain);
             }
         }
         Ok(())

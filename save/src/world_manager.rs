@@ -15,14 +15,14 @@ impl WorldManager {
     }
     pub fn new_world(&mut self) -> Result<&World, WorldGenError> {
         let seed = random();
-        let mut new_world = World::new(800, 600, seed);
+        let mut new_world = World::new(400, 200, seed);
         new_world.generate()?;
         self.world = Some(new_world);
         Ok(self.get_world().unwrap())
     }
 
     fn generate_color(cell: &TerrainCell) -> Color {
-        let altitude_color = Self::altitude_color(cell.altitude);
+        let altitude_color = Self::altitude_contour_color(cell.altitude);
         let rainfall_color = Self::rainfall_color(cell.rainfall);
 
         let normalized_rainfall = f32::max(cell.rainfall / World::MAX_RAINFALL, 0.0);
@@ -44,6 +44,20 @@ impl WorldManager {
             let mult = (1.0 + altitude / World::MAX_ALTITUDE) / 2.0;
 
             Color::rgb(0.58 * mult, 0.29 * mult, 0.0)
+        }
+    }
+
+    fn altitude_contour_color(altitude: f32) -> Color {
+        if altitude < 0.0 {
+            Color::rgb(0.0, 0.0, (2.0 - altitude / World::MIN_ALTITUDE) / 2.0)
+        } else {
+            let mut shade_value = 1.0;
+
+            while shade_value > altitude / World::MAX_ALTITUDE {
+                shade_value -= 0.1;
+            }
+
+            Color::rgb(shade_value, shade_value, shade_value)
         }
     }
 
