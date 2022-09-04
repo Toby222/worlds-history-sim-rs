@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     f32::consts::{PI, TAU},
-    fmt::Display,
+    fmt::{Debug, Display},
 };
 
 use bevy::{math::Vec3A, prelude::Vec2, utils::default};
@@ -32,26 +32,50 @@ impl Error for WorldGenError {
 impl Display for WorldGenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WorldGenError::CartesianError(err) => err.fmt(f),
+            WorldGenError::CartesianError(err) => Display::fmt(err, f),
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct World {
     pub width: i32,
     pub height: i32,
     pub seed: u32,
 
     pub terrain: Vec<Vec<TerrainCell>>,
-    contintent_offsets: [Vec2; World::NUM_CONTINENTS as usize],
+    continent_offsets: [Vec2; World::NUM_CONTINENTS as usize],
+    continent_widths: [f32; World::NUM_CONTINENTS as usize],
     perlin: Perlin,
+}
+impl Debug for World {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("World")
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .field("seed", &self.seed)
+            .field(
+                "Average Rainfall",
+                &(self
+                    .terrain
+                    .iter()
+                    .flatten()
+                    .map(|cell| cell.rainfall)
+                    .sum::<f32>()
+                    / (self.width * self.height) as f32),
+            )
+            .field("continent_offsets", &self.continent_offsets)
+            .field("continent_widths", &self.continent_widths)
+            .field("perlin", &self.perlin)
+            .finish()
+    }
 }
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct TerrainCell {
     pub altitude: f32,
     pub rainfall: f32,
+    pub rain_accumulated: f32,
 }
 
 impl World {
@@ -64,14 +88,16 @@ impl World {
                 vec![TerrainCell::default(); width.try_into().unwrap()];
                 height.try_into().unwrap()
             ],
-            contintent_offsets: [default(); Self::NUM_CONTINENTS as usize],
+            continent_offsets: [default(); Self::NUM_CONTINENTS as usize],
+            continent_widths: [default(); Self::NUM_CONTINENTS as usize],
             perlin: Perlin::new().set_seed(seed),
         }
     }
 
     pub const NUM_CONTINENTS: u8 = 7;
     pub const CONTINENT_FACTOR: f32 = 0.7;
-    pub const CONTINENT_WIDTH_FACTOR: f32 = 5.0;
+    pub const CONTINENT_MIN_WIDTH_FACTOR: f32 = 3.0;
+    pub const CONTINENT_MAX_WIDTH_FACTOR: f32 = 7.0;
 
     pub const MIN_ALTITUDE: f32 = -10000.0;
     pub const MAX_ALTITUDE: f32 = 10000.0;
@@ -93,9 +119,9 @@ impl World {
         if let Err(err) = self.generate_altitude() {
             return Err(WorldGenError::CartesianError(err));
         }
-        // if let Err(err) = self.generate_rainfall() {
-        //     return Err(WorldGenError::CartesianError(err));
-        // }
+        if let Err(err) = self.generate_rainfall_alt() {
+            return Err(WorldGenError::CartesianError(err));
+        }
 
         Ok(())
     }
@@ -104,11 +130,16 @@ impl World {
         let mut rng = rand::thread_rng();
         let width = self.width as f32;
         let height = self.height as f32;
-        for (idx, continent_offset) in self.contintent_offsets.iter_mut().enumerate() {
-            continent_offset.x = rng
-                .gen_range(width * idx as f32 * 2.0 / 5.0..width * (idx as f32 + 2.0) * 2.0 / 5.0)
+
+        for i in 0..Self::NUM_CONTINENTS {
+            self.continent_offsets[i as usize].x = rng
+                .gen_range(width * i as f32 * 2.0 / 5.0..width * (i as f32 + 2.0) * 2.0 / 5.0)
                 .repeat(width);
-            continent_offset.y = rng.gen_range(height * 1.0 / 6.0..height * 5.0 / 6.0);
+            self.continent_offsets[i as usize].y =
+                rng.gen_range(height * 1.0 / 6.0..height * 5.0 / 6.0);
+
+            self.continent_widths[i as usize] =
+                rng.gen_range(Self::CONTINENT_MIN_WIDTH_FACTOR..Self::CONTINENT_MAX_WIDTH_FACTOR);
         }
     }
 
@@ -121,21 +152,23 @@ impl World {
         let mut max_value = 0.0;
         let beta_factor = f32::sin(PI * y / height);
 
-        for Vec2 {
-            x: continent_x,
-            y: contintent_y,
-        } in self.contintent_offsets
-        {
+        for i in 0..Self::NUM_CONTINENTS {
+            let idx = i as usize;
+            let Vec2 {
+                x: continent_x,
+                y: continent_y,
+            } = self.continent_offsets[idx];
+
             let distance_x = f32::min(
                 f32::min((continent_x - x).abs(), (width + continent_x - x).abs()),
                 (continent_x - x - width).abs(),
             ) * beta_factor;
 
-            let distance_y = f32::abs(contintent_y - y);
+            let distance_y = f32::abs(continent_y - y);
 
             let distance = (distance_x * distance_x + distance_y * distance_y).sqrt();
 
-            let value = f32::max(0.0, 1.0 - Self::CONTINENT_WIDTH_FACTOR * distance / width);
+            let value = f32::max(0.0, 1.0 - self.continent_widths[idx] * distance / width);
 
             max_value = f32::max(max_value, value);
         }
@@ -244,6 +277,43 @@ impl World {
 
     fn calculate_altitude(raw_altitude: f32) -> f32 {
         Self::MIN_ALTITUDE + (raw_altitude * Self::ALTITUDE_SPAN)
+    }
+
+    fn generate_rainfall_alt(&mut self) -> Result<(), CartesianError> {
+        const MAX_CYCLES: u8 = 25;
+
+        const ACCUMULATED_RAIN_FACTOR: f32 = 2.0;
+        const RAINFALL_FACTOR: f32 = 0.1;
+
+        for _ in 0..MAX_CYCLES {
+            for x in 0..self.width {
+                let prev_x = (x + 1) % self.width;
+
+                for y in 0..self.height {
+                    let width_factor = f32::sin(PI * y as f32 / self.height as f32);
+
+                    let mut cell = self.terrain[y as usize][x as usize];
+                    cell.rain_accumulated = 0.0;
+
+                    if cell.altitude <= 0.0 {
+                        cell.rain_accumulated +=
+                            width_factor * ACCUMULATED_RAIN_FACTOR * Self::MAX_RAINFALL;
+                    }
+
+                    let prev_cell = self.terrain[y as usize][prev_x as usize];
+
+                    cell.rain_accumulated += prev_cell.rain_accumulated;
+                    cell.rainfall += cell.rain_accumulated * RAINFALL_FACTOR;
+                    cell.rain_accumulated -= cell.rainfall;
+
+                    cell.rain_accumulated = f32::max(cell.rain_accumulated, 0.0);
+
+                    self.terrain[y as usize][x as usize] = cell;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn generate_rainfall(&mut self) -> Result<(), CartesianError> {

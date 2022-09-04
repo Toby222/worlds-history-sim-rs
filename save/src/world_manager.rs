@@ -27,7 +27,7 @@ impl WorldManager {
         let altitude_color = Self::altitude_contour_color(cell.altitude);
         let rainfall_color = Self::rainfall_color(cell.rainfall);
 
-        let normalized_rainfall = f32::max(cell.rainfall / World::MAX_RAINFALL, 0.0);
+        let normalized_rainfall = Self::normalize_rainfall(cell.rainfall);
 
         let r = (altitude_color.r() * (1.0 - normalized_rainfall))
             + (rainfall_color.r() * normalized_rainfall);
@@ -36,7 +36,7 @@ impl WorldManager {
         let b = (altitude_color.b() * (1.0 - normalized_rainfall))
             + (rainfall_color.b() * normalized_rainfall);
 
-        Color::rgb(r, g, b)
+        Color::rgb_linear(r, g, b)
     }
 
     fn altitude_color(altitude: f32) -> Color {
@@ -64,11 +64,19 @@ impl WorldManager {
     }
 
     fn rainfall_color(rainfall: f32) -> Color {
-        if rainfall < 0.0 {
+        if rainfall <= 0.0 {
             Color::BLACK
         } else {
             let mult = rainfall / World::MAX_RAINFALL;
-            Color::GREEN * mult
+            Color::rgb(0.0, mult, 0.0)
+        }
+    }
+
+    fn normalize_rainfall(rainfall: f32) -> f32 {
+        if rainfall <= 0.0 {
+            rainfall
+        } else {
+            rainfall / World::MAX_ALTITUDE
         }
     }
 
