@@ -60,62 +60,15 @@ use bevy::{
 };
 use save::*;
 
-fn get_color(cell: &TerrainCell) -> Color {
-    let altitude_color = gen_altitude_color(cell.altitude);
-    let rainfall_color = gen_rainfall_color(cell.rainfall);
-
-    let normalized_rainfall = f32::max(cell.rainfall / World::MAX_RAINFALL, 0.0);
-
-    let red = (altitude_color.r() * (1.0 - normalized_rainfall))
-        + rainfall_color.r() * normalized_rainfall;
-    let green = (altitude_color.g() * (1.0 - normalized_rainfall))
-        + rainfall_color.g() * normalized_rainfall;
-    let blue = (altitude_color.b() * (1.0 - normalized_rainfall))
-        + rainfall_color.b() * normalized_rainfall;
-
-    Color::rgb(red, green, blue)
-}
-
-fn gen_altitude_color(altitude: f32) -> Color {
-    if altitude < 0.0 {
-        Color::BLUE
-    } else {
-        let mult = (altitude - World::MIN_ALTITUDE) / World::ALTITUDE_SPAN;
-
-        Color::rgb(0.58 * mult, 0.29 * mult, 0.0)
-    }
-}
-
-fn gen_rainfall_color(rainfall: f32) -> Color {
-    if rainfall < 0.0 {
-        Color::BLACK
-    } else {
-        let mult = rainfall / World::MAX_RAINFALL;
-        Color::GREEN * mult
-    }
-}
-
 fn generate_texture(
     mut commands: Commands<'_, '_>,
     mut images: ResMut<'_, Assets<Image>>,
     world_manager: Res<'_, WorldManager>,
 ) {
     let world = world_manager.get_world().unwrap();
-    let terrain_cells: Vec<_> = world.terrain.iter().rev().flatten().collect();
-    let colors: Vec<_> = terrain_cells.iter().map(|cell| get_color(cell)).collect();
-    let data: Vec<_> = colors
-        .iter()
-        .flat_map(|color| {
-            color
-                .as_rgba_f32()
-                .iter()
-                .flat_map(|num| num.to_le_bytes())
-                .collect::<Vec<u8>>()
-        })
-        .collect();
 
     let image_handle = images.add(Image {
-        data,
+        data: world_manager.world_color_bytes(),
         texture_descriptor: TextureDescriptor {
             label: None,
             size: Extent3d {

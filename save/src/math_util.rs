@@ -69,3 +69,7 @@ pub fn random_point_in_sphere(radius: f32) -> Vec3A {
 
     Vec3A::new(mult * x, mult * y, mult * z)
 }
+
+pub fn mix_values(a: f32, b: f32, weight_b: f32) -> f32 {
+    (b * weight_b) + (a * (1.0 - weight_b))
+}
