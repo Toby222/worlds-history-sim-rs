@@ -41,18 +41,13 @@ use bevy::{
         change_detection::ResMut,
         system::{Commands, Res},
     },
-    hierarchy::BuildChildren,
     render::{
-        color::Color,
         render_resource::{
             Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
         },
         texture::{Image, ImageSettings},
     },
-    ui::{
-        entity::{ImageBundle, NodeBundle},
-        Size, Style, UiImage, Val,
-    },
+    ui::{entity::ImageBundle, Size, Style, UiImage, Val},
     utils::default,
     window::WindowDescriptor,
     winit::WinitSettings,
@@ -86,25 +81,14 @@ fn generate_texture(
     });
 
     _ = commands.spawn_bundle(Camera2dBundle::default());
-    _ = commands
-        .spawn_bundle(NodeBundle {
-            style: Style {
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                ..default()
-            },
-            color: Color::NONE.into(),
+    _ = commands.spawn_bundle(ImageBundle {
+        style: Style {
+            size: Size::new(Val::Auto, Val::Auto),
             ..default()
-        })
-        .with_children(|parent| {
-            _ = parent.spawn_bundle(ImageBundle {
-                style: Style {
-                    size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                    ..default()
-                },
-                image: UiImage(image_handle),
-                ..default()
-            });
-        });
+        },
+        image: UiImage(image_handle),
+        ..default()
+    });
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
