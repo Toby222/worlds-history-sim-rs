@@ -10,9 +10,11 @@ impl WorldManager {
     pub fn new() -> WorldManager {
         WorldManager { world: None }
     }
+
     pub fn get_world(&self) -> Option<&World> {
         self.world.as_ref()
     }
+
     pub fn new_world(&mut self) -> Result<&World, WorldGenError> {
         let seed = random();
         let mut new_world = World::new(400, 200, seed);

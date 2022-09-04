@@ -164,8 +164,6 @@ impl World {
             for x in 0..self.terrain[y].len() {
                 let beta = (x as f32 / self.width as f32) * TAU;
 
-                let continent_value = self.continent_modifier(x, y);
-
                 let value_1 =
                     self.random_noise_from_polar_coordinates(alpha, beta, RADIUS_1, offset_1)?;
                 let value_2 =
@@ -177,23 +175,28 @@ impl World {
                 let value_5 =
                     self.random_noise_from_polar_coordinates(alpha, beta, RADIUS_5, offset_5)?;
 
-                let value = continent_value;
-                let value = mix_values(value, value_3, Self::TERRAIN_NOISE_FACTOR_1);
-                let value = value * mix_values(1.0, value_4, Self::TERRAIN_NOISE_FACTOR_2);
-                let value =
-                    value * mix_values(1.0, value_5, Self::TERRAIN_NOISE_FACTOR_3) * 0.2 + 0.4;
+                let continent_value = self.continent_modifier(x, y);
+
+                let mut value_continent = continent_value;
+                value_continent =
+                    mix_values(value_continent, value_3, Self::TERRAIN_NOISE_FACTOR_1);
+                value_continent *= mix_values(1.0, value_4, Self::TERRAIN_NOISE_FACTOR_2);
+
+                let value_b = mix_values(1.0, value_5, Self::TERRAIN_NOISE_FACTOR_3);
 
                 let mut value_mountain =
                     mix_values(value_1, value_2, Self::MOUNTAIN_RANGE_MIX_FACTOR);
                 value_mountain = self.mountain_range_noise_from_random_noise(value_mountain);
-                value_mountain = mix_values(value_mountain, value_3, Self::TERRAIN_NOISE_FACTOR_1);
                 value_mountain =
-                    value_mountain * mix_values(1.0, value_4, Self::TERRAIN_NOISE_FACTOR_2);
-                value_mountain =
-                    value_mountain * mix_values(1.0, value_5, Self::TERRAIN_NOISE_FACTOR_3);
-                value_mountain = 2.0 * value_mountain * value;
+                    mix_values(value_mountain, value_3, Self::TERRAIN_NOISE_FACTOR_1 * 1.5);
+                value_mountain *= mix_values(1.0, value_4, Self::TERRAIN_NOISE_FACTOR_2 * 1.5);
+                value_mountain *= mix_values(1.0, value_5, Self::TERRAIN_NOISE_FACTOR_3 * 1.5);
 
-                self.terrain[y][x].altitude = Self::calculate_altitude(value_mountain);
+                let mut raw_altitude = mix_values(value_continent, value_mountain, 0.25);
+                raw_altitude = mix_values(raw_altitude, value_mountain, 0.1);
+                raw_altitude = mix_values(raw_altitude, value_b, 0.1);
+
+                self.terrain[y][x].altitude = Self::calculate_altitude(raw_altitude);
             }
         }
         Ok(())
