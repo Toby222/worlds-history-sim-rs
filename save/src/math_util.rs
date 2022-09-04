@@ -40,11 +40,12 @@ pub fn cartesian_coordinates(alpha: f32, beta: f32, radius: f32) -> Result<Vec3A
     }
     let mut beta = beta.clone();
 
-    while beta < 0.0 {
-        beta += PI;
-    }
-    while beta >= TAU {
-        beta -= TAU;
+    if beta < 0.0 {
+        while beta < 0.0 {
+            beta += PI;
+        }
+    } else {
+        beta = beta.repeat(TAU);
     }
 
     let sin_alpha = f32::sin(alpha);
@@ -72,4 +73,20 @@ pub fn random_point_in_sphere(radius: f32) -> Vec3A {
 
 pub fn mix_values(a: f32, b: f32, weight_b: f32) -> f32 {
     (b * weight_b) + (a * (1.0 - weight_b))
+}
+
+pub trait RepeatNum {
+    fn repeat(self, length: Self) -> Self;
+}
+impl RepeatNum for f32 {
+    fn repeat(self, length: f32) -> f32 {
+        let mut val = self;
+        while val < 0.0 {
+            val += length;
+        }
+        while val >= length {
+            val -= length;
+        }
+        val
+    }
 }

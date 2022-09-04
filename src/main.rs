@@ -104,7 +104,6 @@ fn generate_texture(
                 image: UiImage(image_handle),
                 ..default()
             });
-            // });
         });
 }
 

@@ -39,9 +39,9 @@ impl WorldManager {
 
     fn altitude_color(altitude: f32) -> Color {
         if altitude < 0.0 {
-            Color::BLUE
+            Color::rgb(0.0, 0.0, (2.0 - altitude / World::MIN_ALTITUDE) / 2.0)
         } else {
-            let mult = (altitude - World::MIN_ALTITUDE) / World::MAX_ALTITUDE;
+            let mult = (1.0 + altitude / World::MAX_ALTITUDE) / 2.0;
 
             Color::rgb(0.58 * mult, 0.29 * mult, 0.0)
         }
