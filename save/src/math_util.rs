@@ -80,13 +80,6 @@ pub trait RepeatNum {
 }
 impl RepeatNum for f32 {
     fn repeat(self, length: f32) -> f32 {
-        let mut val = self;
-        while val < 0.0 {
-            val += length;
-        }
-        while val >= length {
-            val -= length;
-        }
-        val
+        f32::clamp(self - (self / length).floor() * length, 0.0, length)
     }
 }
