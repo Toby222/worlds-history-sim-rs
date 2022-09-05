@@ -76,6 +76,7 @@ pub struct TerrainCell {
     pub altitude: f32,
     pub rainfall: f32,
     pub rain_accumulated: f32,
+    pub previous_rain_accumulated: f32,
 }
 
 impl World {
@@ -280,19 +281,33 @@ impl World {
     }
 
     fn generate_rainfall_alt(&mut self) -> Result<(), CartesianError> {
-        let max_cycles = self.width;
+        let max_cycles = self.width / 5;
 
-        const ACCUMULATED_RAIN_FACTOR: f32 = 0.002;
-        const RAINFALL_FACTOR: f32 = 0.025;
+        const ACCUMULATED_RAIN_FACTOR: f32 = 0.06;
+        const RAINFALL_FACTOR: f32 = 0.005;
+        const RAINFALL_ALTITUDE_FACTOR: f32 = 0.05;
 
         for _ in 0..max_cycles {
             for x in 0..self.width {
-                let prev_x = (x + 1) % self.width;
+                let mut prev_x = (x - 1 + self.width) % self.width;
 
                 for y in 0..self.height {
+                    let prev_y = if y < self.height / 4 {
+                        prev_x = (x + 1) % self.width;
+                        y + 1
+                    } else if y < self.height / 2 {
+                        y - 1
+                    } else if y < (self.height * 3) / 4 {
+                        prev_x = (x + 1) % self.width;
+                        y + 1
+                    } else {
+                        y - 1
+                    };
+
                     let width_factor = f32::sin(PI * y as f32 / self.height as f32);
 
                     let mut cell = self.terrain[y as usize][x as usize];
+                    cell.previous_rain_accumulated = cell.rain_accumulated;
                     cell.rain_accumulated = 0.0;
 
                     if cell.altitude <= 0.0 {
@@ -300,20 +315,22 @@ impl World {
                             width_factor * ACCUMULATED_RAIN_FACTOR * Self::MAX_RAINFALL;
                     }
 
-                    let prev_cell = self.terrain[y as usize][prev_x as usize];
+                    let prev_cell = self.terrain[prev_y as usize][prev_x as usize];
 
-                    let altitude_difference = f32::max(
+                    let altitude_difference =
+                        f32::max(0.0, cell.altitude) - f32::max(0.0, prev_cell.altitude);
+                    let altitude_factor = f32::max(
                         0.0,
-                        f32::max(0.0, cell.altitude) - f32::max(0.0, prev_cell.altitude),
+                        RAINFALL_ALTITUDE_FACTOR * altitude_difference / Self::MAX_ALTITUDE,
                     );
-                    let final_rain_factor = f32::min(
-                        0.1,
-                        RAINFALL_FACTOR + (altitude_difference / Self::MAX_ALTITUDE) * 0.1,
-                    );
+                    let final_rain_factor = f32::min(1.0, RAINFALL_FACTOR + altitude_factor);
 
-                    cell.rain_accumulated += prev_cell.rain_accumulated;
+                    cell.rain_accumulated += prev_cell.previous_rain_accumulated;
+                    cell.rain_accumulated =
+                        f32::min(cell.rain_accumulated, Self::MAX_RAINFALL / RAINFALL_FACTOR);
+
                     let rain_accumulated = cell.rain_accumulated * final_rain_factor;
-                    cell.rainfall += rain_accumulated / (width_factor + 0.001);
+                    cell.rainfall += rain_accumulated;
                     cell.rain_accumulated -= rain_accumulated;
 
                     cell.rain_accumulated = f32::max(cell.rain_accumulated, 0.0);
