@@ -1,4 +1,7 @@
-use crate::{TerrainCell, World, WorldGenError};
+#[cfg(feature = "render")]
+use crate::TerrainCell;
+use crate::{World, WorldGenError};
+#[cfg(feature = "render")]
 use bevy::render::color::Color;
 use rand::random;
 
@@ -23,6 +26,7 @@ impl WorldManager {
         Ok(self.get_world().unwrap())
     }
 
+    #[cfg(feature = "render")]
     fn generate_color(cell: &TerrainCell) -> Color {
         let altitude_color = Self::altitude_contour_color(cell.altitude);
         let rainfall_color = Self::rainfall_color(cell.rainfall);
@@ -39,6 +43,8 @@ impl WorldManager {
         Color::rgb_linear(r, g, b)
     }
 
+    /*
+    #[cfg(feature = "render")]
     fn altitude_color(altitude: f32) -> Color {
         if altitude < 0.0 {
             Color::rgb(0.0, 0.0, (2.0 - altitude / World::MIN_ALTITUDE) / 2.0)
@@ -48,7 +54,9 @@ impl WorldManager {
             Color::rgb(0.58 * mult, 0.29 * mult, 0.0)
         }
     }
+    */
 
+    #[cfg(feature = "render")]
     fn altitude_contour_color(altitude: f32) -> Color {
         if altitude < 0.0 {
             Color::rgb(0.0, 0.0, (2.0 - altitude / World::MIN_ALTITUDE) / 2.0)
@@ -63,6 +71,7 @@ impl WorldManager {
         }
     }
 
+    #[cfg(feature = "render")]
     fn rainfall_color(rainfall: f32) -> Color {
         if rainfall <= 0.0 {
             Color::BLACK
@@ -72,6 +81,7 @@ impl WorldManager {
         }
     }
 
+    #[cfg(feature = "render")]
     fn normalize_rainfall(rainfall: f32) -> f32 {
         if rainfall <= 0.0 {
             rainfall
@@ -80,6 +90,7 @@ impl WorldManager {
         }
     }
 
+    #[cfg(feature = "render")]
     pub fn world_colors(&self) -> Vec<Color> {
         match self.get_world() {
             None => panic!("Called world_colors before generating world"),
@@ -94,6 +105,7 @@ impl WorldManager {
         }
     }
 
+    #[cfg(feature = "render")]
     pub fn world_color_bytes(&self) -> Vec<u8> {
         self.world_colors()
             .iter()

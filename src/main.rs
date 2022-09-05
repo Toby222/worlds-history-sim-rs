@@ -32,11 +32,13 @@
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
 
+mod plugins;
+
+use bevy::app::App;
+#[cfg(feature = "render")]
 use bevy::{
-    app::App,
     asset::Assets,
     core_pipeline::core_2d::Camera2dBundle,
-    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     ecs::{
         change_detection::ResMut,
         system::{Commands, Res},
@@ -51,10 +53,11 @@ use bevy::{
     utils::default,
     window::WindowDescriptor,
     winit::WinitSettings,
-    DefaultPlugins,
 };
+use plugins::WorldPlugins;
 use save::*;
 
+#[cfg(feature = "render")]
 fn generate_texture(
     mut commands: Commands<'_, '_>,
     mut images: ResMut<'_, Assets<Image>>,
@@ -92,27 +95,30 @@ fn generate_texture(
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut app = App::new();
     let mut manager = WorldManager::new();
-    let world = manager.new_world()?;
-
-    App::new()
-        // Only run the app when there is user input. This will significantly reduce CPU/GPU use.
-        .insert_resource(WinitSettings::desktop_app())
-        // Use nearest-neighbor rendering for cripsier pixels
-        .insert_resource(ImageSettings::default_nearest())
-        .insert_resource(WindowDescriptor {
-            width: world.width as f32,
-            height: world.height as f32,
-            title: String::from("World-RS"),
-            resizable: true,
-            ..default()
-        })
-        .insert_resource(manager)
-        .add_startup_system(generate_texture)
-        .add_plugins(DefaultPlugins)
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .run();
+    #[cfg(feature = "render")]
+    {
+        let world = manager.new_world()?;
+        _ = app
+            // Only run the app when there is user input. This will significantly reduce CPU/GPU use.
+            .insert_resource(WinitSettings::desktop_app())
+            // Use nearest-neighbor rendering for cripsier pixels
+            .insert_resource(ImageSettings::default_nearest())
+            .insert_resource(WindowDescriptor {
+                width: world.width as f32,
+                height: world.height as f32,
+                title: String::from("World-RS"),
+                resizable: true,
+                ..default()
+            })
+            .add_startup_system(generate_texture);
+    }
+    #[cfg(not(feature = "render"))]
+    {
+        _ = manager.new_world()?
+    }
+    app.insert_resource(manager).add_plugins(WorldPlugins).run();
 
     Ok(())
 }

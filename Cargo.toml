@@ -3,7 +3,10 @@ name = "worlds-sim-rust"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+debug = ["save/debug"]
+render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/bevy_scene", "bevy/render", "save/render"]
+default = ["render"]
 
 [dependencies.save]
 path = "save"
@@ -11,4 +14,3 @@ path = "save"
 [dependencies.bevy]
 version = "0.8"
 default-features = false
-features = ["bevy_asset", "bevy_winit", "bevy_scene", "render"]

@@ -316,6 +316,7 @@ impl World {
         Ok(())
     }
 
+    /*
     fn generate_rainfall(&mut self) -> Result<(), CartesianError> {
         let offset = Self::random_offset_vector();
         const RADIUS: f32 = 2.0;
@@ -346,4 +347,5 @@ impl World {
         ((raw_rainfall * Self::RAINFALL_ALTITUDE_FACTOR) + Self::MIN_RAINFALL)
             .clamp(0.0, Self::MAX_RAINFALL)
     }
+    */
 }
