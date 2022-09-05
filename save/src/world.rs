@@ -280,12 +280,12 @@ impl World {
     }
 
     fn generate_rainfall_alt(&mut self) -> Result<(), CartesianError> {
-        const MAX_CYCLES: u8 = 25;
+        let max_cycles = self.width;
 
-        const ACCUMULATED_RAIN_FACTOR: f32 = 2.0;
-        const RAINFALL_FACTOR: f32 = 0.1;
+        const ACCUMULATED_RAIN_FACTOR: f32 = 0.002;
+        const RAINFALL_FACTOR: f32 = 0.025;
 
-        for _ in 0..MAX_CYCLES {
+        for _ in 0..max_cycles {
             for x in 0..self.width {
                 let prev_x = (x + 1) % self.width;
 
@@ -302,9 +302,19 @@ impl World {
 
                     let prev_cell = self.terrain[y as usize][prev_x as usize];
 
+                    let altitude_difference = f32::max(
+                        0.0,
+                        f32::max(0.0, cell.altitude) - f32::max(0.0, prev_cell.altitude),
+                    );
+                    let final_rain_factor = f32::min(
+                        0.1,
+                        RAINFALL_FACTOR + (altitude_difference / Self::MAX_ALTITUDE) * 0.1,
+                    );
+
                     cell.rain_accumulated += prev_cell.rain_accumulated;
-                    cell.rainfall += cell.rain_accumulated * RAINFALL_FACTOR;
-                    cell.rain_accumulated -= cell.rainfall;
+                    let rain_accumulated = cell.rain_accumulated * final_rain_factor;
+                    cell.rainfall += rain_accumulated / (width_factor + 0.001);
+                    cell.rain_accumulated -= rain_accumulated;
 
                     cell.rain_accumulated = f32::max(cell.rain_accumulated, 0.0);
 
