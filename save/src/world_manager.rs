@@ -67,6 +67,9 @@ impl WorldManager {
     pub fn get_world(&self) -> Option<&World> {
         self.world.as_ref()
     }
+    pub fn world(&self) -> &World {
+        self.get_world().unwrap()
+    }
 
     pub fn new_world(&mut self) -> Result<&World, WorldGenError> {
         let seed = random();
@@ -142,7 +145,7 @@ impl WorldManager {
             let mut shade_value = 1.0;
 
             while shade_value > altitude / World::MAX_ALTITUDE {
-                shade_value -= 0.1;
+                shade_value -= 0.05;
             }
 
             Color::rgb(shade_value, shade_value, shade_value)

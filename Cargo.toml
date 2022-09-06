@@ -6,7 +6,7 @@ resolver = "2"
 
 [features]
 debug = ["save/debug"]
-render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/render", "save/render"]
+render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/render", "save/render", "dep:bevy_pancam"]
 default = ["render", "debug"]
 
 [dependencies.save]
@@ -15,3 +15,7 @@ path = "save"
 [dependencies.bevy]
 version = "0.8"
 default-features = false
+
+[dependencies.bevy_pancam]
+version = "0.6.1"
+optional = true

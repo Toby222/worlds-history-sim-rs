@@ -4,7 +4,9 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use bevy::{math::Vec3A, prelude::Vec2, utils::default};
+// TODO: Logging doesn't seem to work here? Figure out why and fix
+
+use bevy::{log::info, math::Vec3A, prelude::Vec2, utils::default};
 use noise::{NoiseFn, Perlin, Seedable};
 use rand::Rng;
 
@@ -145,11 +147,14 @@ impl World {
     }
 
     fn generate_continents(&mut self) {
+        info!("Generating continents");
         let mut rng = rand::thread_rng();
         let width = self.width as f32;
         let height = self.height as f32;
 
         for i in 0..Self::NUM_CONTINENTS {
+            info!("{}/{}", i, Self::NUM_CONTINENTS);
+
             self.continent_offsets[i as usize].x = rng
                 .gen_range(width * i as f32 * 2.0 / 5.0..width * (i as f32 + 2.0) * 2.0 / 5.0)
                 .repeat(width);
@@ -159,6 +164,7 @@ impl World {
             self.continent_widths[i as usize] =
                 rng.gen_range(Self::CONTINENT_MIN_WIDTH_FACTOR..Self::CONTINENT_MAX_WIDTH_FACTOR);
         }
+        info!("Done generating continents");
     }
 
     fn continent_modifier(&self, x: usize, y: usize) -> f32 {
@@ -195,6 +201,7 @@ impl World {
     }
 
     fn generate_altitude(&mut self) -> Result<(), CartesianError> {
+        info!("Generating altitude");
         self.generate_continents();
 
         const RADIUS_1: f32 = 0.5;
@@ -211,6 +218,8 @@ impl World {
 
         for y in 0..self.terrain.len() {
             let alpha = (y as f32 / self.height as f32) * PI;
+
+            info!("{}/{}", y, self.terrain.len());
 
             for x in 0..self.terrain[y].len() {
                 let beta = (x as f32 / self.width as f32) * TAU;
@@ -250,6 +259,7 @@ impl World {
                 self.terrain[y][x].altitude = Self::calculate_altitude(raw_altitude);
             }
         }
+        info!("Done generating altitude");
         Ok(())
     }
 
