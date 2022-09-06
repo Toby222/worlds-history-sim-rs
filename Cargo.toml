@@ -6,7 +6,7 @@ edition = "2021"
 [features]
 debug = ["save/debug"]
 render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/render", "save/render"]
-default = ["render"]
+default = ["render", "debug"]
 
 [dependencies.save]
 path = "save"

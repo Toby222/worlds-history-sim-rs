@@ -1,17 +1,42 @@
 #[cfg(feature = "render")]
 use crate::TerrainCell;
 use crate::{World, WorldGenError};
+use bevy::log::debug;
 #[cfg(feature = "render")]
-use bevy::render::color::Color;
+use bevy::{
+    asset::HandleId,
+    render::{color::Color, texture::Image},
+};
 use rand::random;
 
 #[derive(Debug)]
 pub struct WorldManager {
+    #[cfg(feature = "render")]
+    pub image_handle_id: HandleId,
     world: Option<World>,
+    #[cfg(feature = "render")]
+    rainfall_visible: bool,
 }
+
 impl WorldManager {
     pub fn new() -> WorldManager {
-        WorldManager { world: None }
+        Self {
+            #[cfg(feature = "render")]
+            image_handle_id: HandleId::default::<Image>(),
+            world: None,
+            rainfall_visible: false,
+        }
+    }
+
+    #[cfg(feature = "render")]
+    pub fn toggle_rainfall(&mut self) {
+        if self.rainfall_visible {
+            debug!("Turning rainfall off");
+        } else {
+            debug!("Turning rainfall on");
+            debug!("World: {:#?}", self.world);
+        }
+        self.rainfall_visible = !self.rainfall_visible;
     }
 
     pub fn get_world(&self) -> Option<&World> {
@@ -27,9 +52,13 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
-    fn generate_color(cell: &TerrainCell) -> Color {
+    fn generate_color(cell: &TerrainCell, show_rainfall: bool) -> Color {
         let altitude_color = Self::altitude_contour_color(cell.altitude);
-        let rainfall_color = Self::rainfall_color(cell.rainfall);
+        let rainfall_color = if show_rainfall {
+            Self::rainfall_color(cell.rainfall)
+        } else {
+            Color::BLACK
+        };
 
         let normalized_rainfall = Self::normalize_rainfall(cell.rainfall);
 
@@ -73,20 +102,15 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     fn rainfall_color(rainfall: f32) -> Color {
-        if rainfall <= 0.0 {
-            Color::BLACK
-        } else {
-            let mult = rainfall / World::MAX_RAINFALL;
-            Color::rgb(0.0, mult, 0.0)
-        }
+        Color::rgb(0.0, Self::normalize_rainfall(rainfall), 0.0)
     }
 
     #[cfg(feature = "render")]
     fn normalize_rainfall(rainfall: f32) -> f32 {
         if rainfall <= 0.0 {
-            rainfall
+            0.0
         } else {
-            rainfall / World::MAX_ALTITUDE
+            rainfall / World::MAX_RAINFALL
         }
     }
 
@@ -99,7 +123,7 @@ impl WorldManager {
 
                 terrain_cells
                     .iter()
-                    .map(|cell| Self::generate_color(cell))
+                    .map(|cell| Self::generate_color(cell, self.rainfall_visible))
                     .collect()
             }
         }

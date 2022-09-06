@@ -72,6 +72,13 @@ impl Debug for World {
 }
 
 #[derive(Debug, Copy, Clone, Default)]
+pub struct Biome {
+    pub altitude: f32,
+    pub rainfall: f32,
+    pub temperature: f32,
+}
+
+#[derive(Debug, Copy, Clone, Default)]
 pub struct TerrainCell {
     pub altitude: f32,
     pub rainfall: f32,
@@ -120,7 +127,7 @@ impl World {
         if let Err(err) = self.generate_altitude() {
             return Err(WorldGenError::CartesianError(err));
         }
-        if let Err(err) = self.generate_rainfall_alt() {
+        if let Err(err) = self.generate_rainfall() {
             return Err(WorldGenError::CartesianError(err));
         }
 
@@ -280,6 +287,7 @@ impl World {
         Self::MIN_ALTITUDE + (raw_altitude * Self::ALTITUDE_SPAN)
     }
 
+    /*
     fn generate_rainfall_alt(&mut self) -> Result<(), CartesianError> {
         let max_cycles = self.width / 5;
 
@@ -289,13 +297,12 @@ impl World {
 
         for _ in 0..max_cycles {
             for x in 0..self.width {
-                let mut prev_x = (x - 1 + self.width) % self.width;
-
                 for y in 0..self.height {
+                    let mut prev_x = (x - 1 + self.width) % self.width;
                     let prev_y = if y < self.height / 4 {
-                        prev_x = (x + 1) % self.width;
                         y + 1
                     } else if y < self.height / 2 {
+                        prev_x = (x + 1) % self.width;
                         y - 1
                     } else if y < (self.height * 3) / 4 {
                         prev_x = (x + 1) % self.width;
@@ -304,15 +311,12 @@ impl World {
                         y - 1
                     };
 
-                    let width_factor = f32::sin(PI * y as f32 / self.height as f32);
-
                     let mut cell = self.terrain[y as usize][x as usize];
                     cell.previous_rain_accumulated = cell.rain_accumulated;
                     cell.rain_accumulated = 0.0;
 
                     if cell.altitude <= 0.0 {
-                        cell.rain_accumulated +=
-                            width_factor * ACCUMULATED_RAIN_FACTOR * Self::MAX_RAINFALL;
+                        cell.rain_accumulated += ACCUMULATED_RAIN_FACTOR * Self::MAX_RAINFALL;
                     }
 
                     let prev_cell = self.terrain[prev_y as usize][prev_x as usize];
@@ -342,8 +346,8 @@ impl World {
 
         Ok(())
     }
+    */
 
-    /*
     fn generate_rainfall(&mut self) -> Result<(), CartesianError> {
         let offset = Self::random_offset_vector();
         const RADIUS: f32 = 2.0;
@@ -351,14 +355,16 @@ impl World {
         for y in 0..self.terrain.len() {
             let alpha = (y as f32 / self.height as f32) * PI;
             for x in 0..self.terrain[y].len() {
-                let mut cell = self.terrain[y][x];
                 let beta = (x as f32 / self.width as f32) * TAU;
 
-                let base_rainfall = Self::calculate_rainfall(
-                    self.random_noise_from_polar_coordinates(alpha, beta, RADIUS, offset)?,
-                );
+                let value =
+                    self.random_noise_from_polar_coordinates(alpha, beta, RADIUS, offset)?;
+
+                let mut cell = &mut self.terrain[y][x];
+
+                let base_rainfall = Self::calculate_rainfall(value);
                 let altitude_factor = f32::clamp(
-                    cell.altitude / Self::MAX_ALTITUDE * Self::RAINFALL_ALTITUDE_FACTOR,
+                    (cell.altitude / Self::MAX_ALTITUDE) * Self::RAINFALL_ALTITUDE_FACTOR,
                     0.0,
                     1.0,
                 );
@@ -371,8 +377,10 @@ impl World {
     }
 
     fn calculate_rainfall(raw_rainfall: f32) -> f32 {
-        ((raw_rainfall * Self::RAINFALL_ALTITUDE_FACTOR) + Self::MIN_RAINFALL)
-            .clamp(0.0, Self::MAX_RAINFALL)
+        f32::clamp(
+            (raw_rainfall * Self::RAINFALL_SPAN) + Self::MIN_RAINFALL,
+            0.0,
+            Self::MAX_RAINFALL,
+        )
     }
-    */
 }

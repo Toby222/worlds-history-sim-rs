@@ -18,8 +18,8 @@ impl PluginGroup for WorldPlugins {
         #[cfg(feature = "render")]
         {
             use bevy::{
-                asset::AssetPlugin, core_pipeline::CorePipelinePlugin, input::InputPlugin,
-                render::RenderPlugin, sprite::SpritePlugin, text::TextPlugin,
+                asset::AssetPlugin, core_pipeline::CorePipelinePlugin, hierarchy::HierarchyPlugin,
+                input::InputPlugin, render::RenderPlugin, sprite::SpritePlugin, text::TextPlugin,
                 transform::TransformPlugin, ui::UiPlugin, window::WindowPlugin, winit::WinitPlugin,
             };
             _ = group
@@ -28,7 +28,7 @@ impl PluginGroup for WorldPlugins {
                 .add(InputPlugin::default())
                 .add(WindowPlugin::default())
                 .add(AssetPlugin::default())
-                // scene
+                .add(HierarchyPlugin::default())
                 .add(WinitPlugin::default())
                 .add(RenderPlugin::default())
                 .add(CorePipelinePlugin::default())
