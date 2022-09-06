@@ -6,6 +6,7 @@ resolver = "2"
 
 [features]
 debug = ["save/debug"]
+planet_view = ["render"]
 render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/render", "save/render", "dep:bevy_pancam"]
 default = ["render", "debug"]
 

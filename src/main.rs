@@ -42,25 +42,30 @@ use bevy::{
     log::LogSettings,
     utils::{default, tracing::Level},
 };
+#[cfg(all(feature = "render", feature = "planet_view"))]
+use bevy::{
+    asset::Handle,
+    core_pipeline::core_3d::Camera3dBundle,
+    pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
+    prelude::Vec3,
+    render::camera::OrthographicProjection,
+    render::mesh::{shape::Icosphere, Mesh},
+    transform::components::Transform,
+};
 #[cfg(feature = "render")]
 use bevy::{
-    asset::{AssetServer, Assets, Handle},
-    core_pipeline::{
-        core_2d::{Camera2d, Camera2dBundle},
-        core_3d::Camera3dBundle,
-    },
+    asset::{AssetServer, Assets},
+    core_pipeline::core_2d::{Camera2d, Camera2dBundle},
     ecs::{
         change_detection::ResMut,
         query::{Changed, With},
         system::{Commands, Query, Res},
     },
     hierarchy::BuildChildren,
-    pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
-    prelude::{Vec2, Vec3},
+    prelude::Vec2,
     render::{
-        camera::{Camera, OrthographicProjection, RenderTarget},
+        camera::{Camera, RenderTarget},
         color::Color,
-        mesh::{shape::Icosphere, Mesh},
         render_resource::{
             Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
         },
@@ -68,7 +73,7 @@ use bevy::{
     },
     sprite::{Sprite, SpriteBundle},
     text::Text,
-    transform::components::{GlobalTransform, Transform},
+    transform::components::GlobalTransform,
     ui::{
         entity::{NodeBundle, TextBundle},
         AlignSelf, FocusPolicy, Interaction, JustifyContent, PositionType, Size, Style, UiColor,
@@ -77,6 +82,7 @@ use bevy::{
     window::{CursorIcon, WindowDescriptor, Windows},
     winit::WinitSettings,
 };
+
 #[cfg(all(feature = "debug", feature = "render"))]
 use bevy::{
     diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
@@ -189,9 +195,9 @@ fn update_cursor_map_position(
     }
 }
 
-#[cfg(feature = "render")]
+#[cfg(all(feature = "render", feature = "planet_view"))]
 const ROTATION_SPEED: f32 = 0.002;
-#[cfg(feature = "render")]
+#[cfg(all(feature = "render", feature = "planet_view"))]
 fn rotate_planet(mut planet_transform: Query<'_, '_, &mut Transform, With<Handle<Mesh>>>) {
     planet_transform.single_mut().rotate_y(ROTATION_SPEED);
 }
@@ -240,8 +246,8 @@ fn update_info_panel(
 fn generate_graphics(
     mut commands: Commands<'_, '_>,
     mut images: ResMut<'_, Assets<Image>>,
-    mut materials: ResMut<'_, Assets<StandardMaterial>>,
-    mut meshes: ResMut<'_, Assets<Mesh>>,
+    #[cfg(feature = "planet_view")] mut materials: ResMut<'_, Assets<StandardMaterial>>,
+    #[cfg(feature = "planet_view")] mut meshes: ResMut<'_, Assets<Mesh>>,
     mut world_manager: ResMut<'_, WorldManager>,
     asset_server: Res<'_, AssetServer>,
 ) {
@@ -270,42 +276,43 @@ fn generate_graphics(
     });
     world_manager.image_handle_id = image_handle.id;
 
-    _ = commands.spawn_bundle(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 0.0, 8.0).looking_at(default(), Vec3::Y),
-        projection: OrthographicProjection {
-            scale: 0.01,
-            ..default()
-        }
-        .into(),
-        ..default()
-    });
-    _ = commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(Mesh::from(Icosphere {
-            radius: 2.0,
-            subdivisions: 9,
-        })),
-        material: materials.add(images.get_handle(world_manager.image_handle_id).into()),
-        transform: Transform::from_translation(default()),
-        ..default()
-    });
-    _ = commands.spawn_bundle(PointLightBundle {
-        transform: Transform::from_xyz(-20.0, 20.0, 50.0),
-        point_light: PointLight {
-            intensity: 600000.,
-            range: 100.,
-            ..default()
-        },
-        ..default()
-    });
-
-    _ = commands
-        .spawn_bundle(Camera2dBundle {
+    #[cfg(feature = "planet_view")]
+    {
+        _ = commands.spawn_bundle(Camera3dBundle {
             camera: Camera {
                 is_active: false,
                 ..default()
             },
+            transform: Transform::from_xyz(0.0, 0.0, 8.0).looking_at(default(), Vec3::Y),
+            projection: OrthographicProjection {
+                scale: 0.01,
+                ..default()
+            }
+            .into(),
             ..default()
-        })
+        });
+        _ = commands.spawn_bundle(PbrBundle {
+            mesh: meshes.add(Mesh::from(Icosphere {
+                radius: 2.0,
+                subdivisions: 9,
+            })),
+            material: materials.add(images.get_handle(world_manager.image_handle_id).into()),
+            transform: Transform::from_translation(default()),
+            ..default()
+        });
+        _ = commands.spawn_bundle(PointLightBundle {
+            transform: Transform::from_xyz(-20.0, 20.0, 50.0),
+            point_light: PointLight {
+                intensity: 600000.,
+                range: 100.,
+                ..default()
+            },
+            ..default()
+        });
+    }
+
+    _ = commands
+        .spawn_bundle(Camera2dBundle { ..default() })
         .insert(PanCam::default());
     _ = commands.spawn_bundle(SpriteBundle {
         texture: images.get_handle(world_manager.image_handle_id),
@@ -419,8 +426,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .add_startup_system(generate_graphics)
             .add_system(handle_toolbar_button)
             .add_system(update_cursor_map_position)
-            .add_system(update_info_panel)
-            .add_system(rotate_planet);
+            .add_system(update_info_panel);
+        #[cfg(all(feature = "render", feature = "planet_view"))]
+        {
+            _ = app.add_system(rotate_planet);
+        }
     }
     #[cfg(not(feature = "render"))]
     {
