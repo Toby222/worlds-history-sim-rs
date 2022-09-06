@@ -19,8 +19,9 @@ impl PluginGroup for WorldPlugins {
         {
             use bevy::{
                 asset::AssetPlugin, core_pipeline::CorePipelinePlugin, hierarchy::HierarchyPlugin,
-                input::InputPlugin, render::RenderPlugin, sprite::SpritePlugin, text::TextPlugin,
-                transform::TransformPlugin, ui::UiPlugin, window::WindowPlugin, winit::WinitPlugin,
+                input::InputPlugin, pbr::PbrPlugin, render::RenderPlugin, sprite::SpritePlugin,
+                text::TextPlugin, transform::TransformPlugin, ui::UiPlugin, window::WindowPlugin,
+                winit::WinitPlugin,
             };
             use bevy_pancam::PanCamPlugin;
 
@@ -37,6 +38,7 @@ impl PluginGroup for WorldPlugins {
                 .add(SpritePlugin::default())
                 .add(TextPlugin::default())
                 .add(UiPlugin::default())
+                .add(PbrPlugin::default())
                 .add(PanCamPlugin::default());
         }
         #[cfg(not(feature = "render"))]

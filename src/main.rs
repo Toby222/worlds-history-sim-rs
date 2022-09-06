@@ -43,8 +43,11 @@ use bevy::{
 };
 #[cfg(feature = "render")]
 use bevy::{
-    asset::{AssetServer, Assets},
-    core_pipeline::core_2d::{Camera2d, Camera2dBundle},
+    asset::{AssetServer, Assets, Handle},
+    core_pipeline::{
+        core_2d::{Camera2d, Camera2dBundle},
+        core_3d::{Camera3d, Camera3dBundle},
+    },
     ecs::{
         change_detection::ResMut,
         component::Component,
@@ -52,10 +55,12 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::BuildChildren,
-    prelude::Vec2,
+    pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
+    prelude::{Vec2, Vec3},
     render::{
-        camera::{Camera, RenderTarget},
+        camera::{Camera, OrthographicProjection, RenderTarget},
         color::Color,
+        mesh::{shape::Icosphere, Mesh},
         render_resource::{
             Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
         },
@@ -63,12 +68,12 @@ use bevy::{
     },
     sprite::{Sprite, SpriteBundle},
     text::Text,
-    transform::components::GlobalTransform,
+    transform::components::{GlobalTransform, Transform},
     ui::{
         entity::{ButtonBundle, NodeBundle, TextBundle},
         widget::Button,
-        AlignItems, FocusPolicy, Interaction, JustifyContent, PositionType, Size, Style, UiColor,
-        UiRect, Val,
+        AlignItems, AlignSelf, FocusPolicy, Interaction, JustifyContent, PositionType, Size, Style,
+        UiColor, UiRect, Val,
     },
     utils::default,
     window::{CursorIcon, WindowDescriptor, Windows},
@@ -84,6 +89,8 @@ fn refresh_world_texture(images: &mut Assets<Image>, world_manager: &WorldManage
     debug!("refreshing world texture");
     let image_handle = images.get_handle(world_manager.image_handle_id);
     images.get_mut(&image_handle).unwrap().data = world_manager.world_color_bytes();
+
+    // TODO: Update Icosphere material... try to find out why it doesn't automatically=
 }
 
 #[cfg(feature = "render")]
@@ -247,6 +254,12 @@ fn update_cursor_map_position(
     }
 }
 
+const ROTATION_SPEED: f32 = 0.002;
+#[cfg(feature = "render")]
+fn rotate_planet(mut planet_transform: Query<'_, '_, &mut Transform, With<Handle<Mesh>>>) {
+    planet_transform.single_mut().rotate_y(ROTATION_SPEED);
+}
+
 #[cfg(feature = "render")]
 fn update_info_panel(
     cursor_position: Res<'_, CursorMapPosition>,
@@ -273,11 +286,11 @@ fn update_info_panel(
 fn generate_graphics(
     mut commands: Commands<'_, '_>,
     mut images: ResMut<'_, Assets<Image>>,
+    mut materials: ResMut<'_, Assets<StandardMaterial>>,
+    mut meshes: ResMut<'_, Assets<Mesh>>,
     mut world_manager: ResMut<'_, WorldManager>,
     asset_server: Res<'_, AssetServer>,
 ) {
-    use bevy::ui::AlignSelf;
-
     let world = world_manager.world();
     let custom_sprite_size = Vec2 {
         x: (WORLD_SCALE * world.width) as f32,
@@ -303,8 +316,42 @@ fn generate_graphics(
     });
     world_manager.image_handle_id = image_handle.id;
 
+    _ = commands.spawn_bundle(Camera3dBundle {
+        transform: Transform::from_xyz(0.0, 0.0, 8.0).looking_at(default(), Vec3::Y),
+        projection: OrthographicProjection {
+            scale: 0.01,
+            ..default()
+        }
+        .into(),
+        ..default()
+    });
+    _ = commands.spawn_bundle(PbrBundle {
+        mesh: meshes.add(Mesh::from(Icosphere {
+            radius: 2.0,
+            subdivisions: 9,
+        })),
+        material: materials.add(images.get_handle(world_manager.image_handle_id).into()),
+        transform: Transform::from_translation(default()),
+        ..default()
+    });
+    _ = commands.spawn_bundle(PointLightBundle {
+        transform: Transform::from_xyz(-20.0, 20.0, 50.0),
+        point_light: PointLight {
+            intensity: 600000.,
+            range: 100.,
+            ..default()
+        },
+        ..default()
+    });
+
     _ = commands
-        .spawn_bundle(Camera2dBundle::default())
+        .spawn_bundle(Camera2dBundle {
+            camera: Camera {
+                is_active: false,
+                ..default()
+            },
+            ..default()
+        })
         .insert(PanCam::default());
     _ = commands.spawn_bundle(SpriteBundle {
         texture: images.get_handle(world_manager.image_handle_id),
@@ -327,7 +374,6 @@ fn generate_graphics(
             _ = root_node
                 .spawn_bundle(NodeBundle {
                     style: Style {
-                        // align_items: AlignItems::FlexEnd,
                         align_self: AlignSelf::FlexEnd,
                         padding: UiRect::all(Val::Px(2.0)),
                         ..default()
@@ -452,8 +498,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let world = manager.new_world()?;
         _ = app
-            // Only run the app when there is user input. This will significantly reduce CPU/GPU use.
-            .insert_resource(WinitSettings::desktop_app())
+            .insert_resource(WinitSettings::game())
             // Use nearest-neighbor rendering for cripsier pixels
             .insert_resource(ImageSettings::default_nearest())
             .insert_resource(WindowDescriptor {
@@ -469,7 +514,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .add_system(handle_temperature_button)
             .add_system(handle_contours_button)
             .add_system(update_cursor_map_position)
-            .add_system(update_info_panel);
+            .add_system(update_info_panel)
+            .add_system(rotate_planet);
     }
     #[cfg(not(feature = "render"))]
     {
