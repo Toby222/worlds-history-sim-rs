@@ -32,7 +32,7 @@
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
 
-mod plugins;
+mod world_plugins;
 
 use bevy::{
     app::App,
@@ -67,7 +67,7 @@ use bevy::{
     window::{CursorIcon, WindowDescriptor, Windows},
     winit::WinitSettings,
 };
-use plugins::WorldPlugins;
+use world_plugins::WorldPlugins;
 use save::*;
 
 #[cfg(feature = "render")]
