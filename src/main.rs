@@ -60,8 +60,8 @@ use bevy::{
     ui::{
         entity::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},
         widget::Button,
-        AlignItems, FocusPolicy, Interaction, JustifyContent, Size, Style, UiColor, UiImage,
-        UiRect, Val,
+        AlignItems, FocusPolicy, Interaction, JustifyContent, PositionType, Size, Style, UiColor,
+        UiImage, UiRect, Val,
     },
     utils::default,
     window::{CursorIcon, WindowDescriptor, Windows},
@@ -221,21 +221,31 @@ fn generate_graphics(
 
     _ = commands.spawn_bundle(Camera2dBundle::default());
     _ = commands
-        .spawn_bundle(ImageBundle {
+        .spawn_bundle(NodeBundle {
             style: Style {
-                size: Size::new(Val::Percent(100.0), Val::Auto),
+                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                 ..default()
             },
-            image: UiImage(image_handle),
+            color: Color::NONE.into(),
             ..default()
         })
-        .with_children(|world_map| {
-            _ = world_map
+        .with_children(|root_node| {
+            _ = root_node.spawn_bundle(ImageBundle {
+                style: Style {
+                    size: Size::new(Val::Percent(100.0), Val::Auto),
+                    ..default()
+                },
+                image: UiImage(image_handle),
+                ..default()
+            });
+
+            _ = root_node
                 .spawn_bundle(NodeBundle {
                     style: Style {
                         size: Size::new(Val::Percent(100.0), Val::Undefined),
                         padding: UiRect::all(Val::Px(3.0)),
                         justify_content: JustifyContent::SpaceAround,
+                        position_type: PositionType::Absolute,
                         ..default()
                     },
                     color: Color::NONE.into(),
