@@ -16,6 +16,8 @@ pub struct WorldManager {
     world: Option<World>,
     #[cfg(feature = "render")]
     rainfall_visible: bool,
+    #[cfg(feature = "render")]
+    temperature_visible: bool,
 }
 
 impl WorldManager {
@@ -25,6 +27,7 @@ impl WorldManager {
             image_handle_id: HandleId::default::<Image>(),
             world: None,
             rainfall_visible: false,
+            temperature_visible: false,
         }
     }
 
@@ -34,9 +37,18 @@ impl WorldManager {
             debug!("Turning rainfall off");
         } else {
             debug!("Turning rainfall on");
-            debug!("World: {:#?}", self.world);
         }
         self.rainfall_visible = !self.rainfall_visible;
+    }
+
+    #[cfg(feature = "render")]
+    pub fn toggle_temperature(&mut self) {
+        if self.temperature_visible {
+            debug!("Turning temperature off");
+        } else {
+            debug!("Turning temperature on");
+        }
+        self.temperature_visible = !self.temperature_visible;
     }
 
     pub fn get_world(&self) -> Option<&World> {
@@ -52,24 +64,46 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
-    fn generate_color(cell: &TerrainCell, show_rainfall: bool) -> Color {
-        let altitude_color = Self::altitude_contour_color(cell.altitude);
-        let rainfall_color = if show_rainfall {
-            Self::rainfall_color(cell.rainfall)
-        } else {
-            Color::BLACK
-        };
+    fn generate_color(&self, cell: &TerrainCell) -> Color {
+        let mut final_color = Self::altitude_color(cell.altitude);
 
-        let normalized_rainfall = Self::normalize_rainfall(cell.rainfall);
+        if self.rainfall_visible {
+            let rainfall_color = Self::rainfall_color(cell.rainfall);
+            let normalized_rainfall = Self::normalize_rainfall(cell.rainfall);
 
-        let r = (altitude_color.r() * (1.0 - normalized_rainfall))
-            + (rainfall_color.r() * normalized_rainfall);
-        let g = (altitude_color.g() * (1.0 - normalized_rainfall))
-            + (rainfall_color.g() * normalized_rainfall);
-        let b = (altitude_color.b() * (1.0 - normalized_rainfall))
-            + (rainfall_color.b() * normalized_rainfall);
+            _ = final_color.set_r(
+                (final_color.r() * (1.0 - normalized_rainfall))
+                    + (rainfall_color.r() * normalized_rainfall),
+            );
+            _ = final_color.set_g(
+                (final_color.g() * (1.0 - normalized_rainfall))
+                    + (rainfall_color.g() * normalized_rainfall),
+            );
+            _ = final_color.set_b(
+                (final_color.b() * (1.0 - normalized_rainfall))
+                    + (rainfall_color.b() * normalized_rainfall),
+            );
+        }
 
-        Color::rgb_linear(r, g, b)
+        if self.temperature_visible {
+            let temperature_color = Self::temperature_color(cell.temperature);
+            let normalized_temperature = Self::normalize_temperature(cell.temperature);
+
+            _ = final_color.set_r(
+                (final_color.r() * (1.0 - normalized_temperature))
+                    + (temperature_color.r() * normalized_temperature),
+            );
+            _ = final_color.set_g(
+                (final_color.g() * (1.0 - normalized_temperature))
+                    + (temperature_color.g() * normalized_temperature),
+            );
+            _ = final_color.set_b(
+                (final_color.b() * (1.0 - normalized_temperature))
+                    + (temperature_color.b() * normalized_temperature),
+            );
+        }
+
+        final_color
     }
 
     /*
@@ -115,6 +149,17 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
+    fn temperature_color(temperature: f32) -> Color {
+        let normalized_temperature = Self::normalize_temperature(temperature);
+        Color::rgb(normalized_temperature, 1.0 - normalized_temperature, 0.0)
+    }
+
+    #[cfg(feature = "render")]
+    fn normalize_temperature(temperature: f32) -> f32 {
+        (temperature - World::MIN_TEMPERATURE) / World::TEMPERATURE_SPAN
+    }
+
+    #[cfg(feature = "render")]
     pub fn world_colors(&self) -> Vec<Color> {
         match self.get_world() {
             None => panic!("Called world_colors before generating world"),
@@ -123,7 +168,7 @@ impl WorldManager {
 
                 terrain_cells
                     .iter()
-                    .map(|cell| Self::generate_color(cell, self.rainfall_visible))
+                    .map(|cell| self.generate_color(cell))
                     .collect()
             }
         }

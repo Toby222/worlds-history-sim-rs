@@ -6,7 +6,7 @@
 #![warn(macro_use_extern_crate)]
 #![warn(meta_variable_misuse)]
 #![warn(missing_abi)]
-#![warn(missing_copy_implementations)]
+// #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
 // #![warn(missing_docs)]
 #![warn(non_ascii_idents)]
@@ -45,6 +45,7 @@ use bevy::{
     core_pipeline::core_2d::Camera2dBundle,
     ecs::{
         change_detection::ResMut,
+        component::Component,
         query::{Changed, With},
         system::{Commands, Query, Res},
     },
@@ -55,12 +56,12 @@ use bevy::{
             Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
         },
         texture::{Image, ImageSettings},
-        view::Visibility,
     },
     ui::{
-        entity::{ButtonBundle, ImageBundle, TextBundle},
+        entity::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},
         widget::Button,
-        AlignItems, Interaction, JustifyContent, Size, Style, UiColor, UiImage, UiRect, Val,
+        AlignItems, FocusPolicy, Interaction, JustifyContent, Size, Style, UiColor, UiImage,
+        UiRect, Val,
     },
     utils::default,
     window::{CursorIcon, WindowDescriptor, Windows},
@@ -76,31 +77,69 @@ fn refresh_world_texture(images: &mut Assets<Image>, world_manager: &WorldManage
     images.get_mut(&image_handle).unwrap().data = world_manager.world_color_bytes();
 }
 
+#[cfg(feature = "render")]
+#[derive(Component, Default)]
+struct RainfallButton;
+
+#[cfg(feature = "render")]
+#[derive(Component, Default)]
+struct TemperatureButton;
+
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.60, 0.35);
 #[cfg(feature = "render")]
-fn handle_button_interaction(
+fn handle_rainfall_button(
     mut interaction_query: Query<
         '_,
         '_,
-        (&Interaction, &mut UiColor /*, &Children*/),
-        (Changed<Interaction>, With<Button>),
+        (&Interaction, &mut UiColor),
+        (Changed<Interaction>, With<RainfallButton>),
     >,
-    // mut text_query: Query<'_, '_, &mut Text>,
     mut windows: ResMut<'_, Windows>,
     mut images: ResMut<'_, Assets<Image>>,
     mut world_manager: ResMut<'_, WorldManager>,
 ) {
-    for (interaction, mut color /*, children*/) in &mut interaction_query {
-        // let mut text = text_query.get_mut(children[0]).unwrap();
-
+    for (interaction, mut color) in &mut interaction_query {
         match *interaction {
             Interaction::Clicked => {
                 windows.primary_mut().set_cursor_icon(CursorIcon::Default);
                 *color = PRESSED_BUTTON.into();
                 debug!("Toggling rainfall");
                 world_manager.toggle_rainfall();
+                refresh_world_texture(&mut images, &world_manager)
+            }
+            Interaction::Hovered => {
+                windows.primary_mut().set_cursor_icon(CursorIcon::Hand);
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                windows.primary_mut().set_cursor_icon(CursorIcon::Default);
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
+
+#[cfg(feature = "render")]
+fn handle_temperature_button(
+    mut interaction_query: Query<
+        '_,
+        '_,
+        (&Interaction, &mut UiColor),
+        (Changed<Interaction>, With<TemperatureButton>),
+    >,
+    mut windows: ResMut<'_, Windows>,
+    mut images: ResMut<'_, Assets<Image>>,
+    mut world_manager: ResMut<'_, WorldManager>,
+) {
+    for (interaction, mut color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Clicked => {
+                windows.primary_mut().set_cursor_icon(CursorIcon::Default);
+                *color = PRESSED_BUTTON.into();
+                debug!("Toggling temperature");
+                world_manager.toggle_temperature();
                 refresh_world_texture(&mut images, &world_manager)
             }
             Interaction::Hovered => {
@@ -155,37 +194,68 @@ fn generate_graphics(
         })
         .with_children(|world_map| {
             _ = world_map
-                .spawn_bundle(ButtonBundle {
-                    button: Button,
+                .spawn_bundle(NodeBundle {
                     style: Style {
-                        align_items: AlignItems::Center,
-                        justify_content: JustifyContent::Center,
-                        margin: UiRect {
-                            left: Val::Auto,
-                            right: Val::Px(20.0),
-                            top: Val::Auto,
-                            bottom: Val::Px(20.0),
-                            ..default()
-                        },
-                        padding: UiRect::all(Val::Px(2.0)),
+                        size: Size::new(Val::Percent(100.0), Val::Undefined),
+                        padding: UiRect::all(Val::Px(3.0)),
+                        justify_content: JustifyContent::SpaceAround,
                         ..default()
                     },
-                    color: NORMAL_BUTTON.into(),
-                    visibility: Visibility::visible(),
+                    color: Color::NONE.into(),
+                    focus_policy: FocusPolicy::Pass,
                     ..default()
                 })
-                .with_children(|button| {
-                    _ = button.spawn_bundle(TextBundle {
-                        text: bevy::text::Text::from_section(
-                            "Toggle rainfall",
-                            bevy::text::TextStyle {
-                                font: asset_server.load("JuliaMono.ttf"),
-                                font_size: 20.0,
-                                color: Color::WHITE,
+                .with_children(|button_box| {
+                    _ = button_box
+                        .spawn_bundle(ButtonBundle {
+                            button: Button,
+                            style: Style {
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                ..default()
                             },
-                        ),
-                        ..default()
-                    });
+                            color: NORMAL_BUTTON.into(),
+                            ..default()
+                        })
+                        .insert(RainfallButton::default())
+                        .with_children(|button| {
+                            _ = button.spawn_bundle(TextBundle {
+                                text: bevy::text::Text::from_section(
+                                    "Toggle rainfall",
+                                    bevy::text::TextStyle {
+                                        font: asset_server.load("JuliaMono.ttf"),
+                                        font_size: 20.0,
+                                        color: Color::WHITE,
+                                    },
+                                ),
+                                ..default()
+                            });
+                        });
+                    _ = button_box
+                        .spawn_bundle(ButtonBundle {
+                            button: Button,
+                            style: Style {
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                ..default()
+                            },
+                            color: NORMAL_BUTTON.into(),
+                            ..default()
+                        })
+                        .insert(TemperatureButton::default())
+                        .with_children(|button| {
+                            _ = button.spawn_bundle(TextBundle {
+                                text: bevy::text::Text::from_section(
+                                    "Toggle temperature",
+                                    bevy::text::TextStyle {
+                                        font: asset_server.load("JuliaMono.ttf"),
+                                        font_size: 20.0,
+                                        color: Color::WHITE,
+                                    },
+                                ),
+                                ..default()
+                            });
+                        });
                 });
         });
 }
@@ -209,7 +279,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ..default()
             })
             .add_startup_system(generate_graphics)
-            .add_system(handle_button_interaction);
+            .add_system(handle_rainfall_button)
+            .add_system(handle_temperature_button);
     }
     #[cfg(not(feature = "render"))]
     {

@@ -6,7 +6,7 @@
 #![warn(macro_use_extern_crate)]
 #![warn(meta_variable_misuse)]
 #![warn(missing_abi)]
-#![warn(missing_copy_implementations)]
+// #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
 // #![warn(missing_docs)]
 #![warn(non_ascii_idents)]

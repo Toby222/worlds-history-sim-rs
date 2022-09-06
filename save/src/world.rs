@@ -71,17 +71,19 @@ impl Debug for World {
     }
 }
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Biome {
     pub altitude: f32,
     pub rainfall: f32,
     pub temperature: f32,
 }
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct TerrainCell {
     pub altitude: f32,
     pub rainfall: f32,
+    pub temperature: f32,
+
     pub rain_accumulated: f32,
     pub previous_rain_accumulated: f32,
 }
@@ -118,16 +120,24 @@ impl World {
     pub const TERRAIN_NOISE_FACTOR_2: f32 = 0.15;
     pub const TERRAIN_NOISE_FACTOR_3: f32 = 0.1;
 
-    pub const MIN_RAINFALL: f32 = -10.0;
+    pub const MIN_RAINFALL: f32 = -20.0;
     pub const MAX_RAINFALL: f32 = 100.0;
     pub const RAINFALL_SPAN: f32 = Self::MAX_RAINFALL - Self::MIN_RAINFALL;
     pub const RAINFALL_ALTITUDE_FACTOR: f32 = 1.0;
+
+    pub const MIN_TEMPERATURE: f32 = -100.0;
+    pub const MAX_TEMPERATURE: f32 = 100.0;
+    pub const TEMPERATURE_SPAN: f32 = Self::MAX_TEMPERATURE - Self::MIN_RAINFALL;
+    pub const TEMPERATURE_ALTITUDE_FACTOR: f32 = 1.0;
 
     pub fn generate(&mut self) -> Result<(), WorldGenError> {
         if let Err(err) = self.generate_altitude() {
             return Err(WorldGenError::CartesianError(err));
         }
         if let Err(err) = self.generate_rainfall() {
+            return Err(WorldGenError::CartesianError(err));
+        }
+        if let Err(err) = self.generate_temperature() {
             return Err(WorldGenError::CartesianError(err));
         }
 
@@ -357,12 +367,12 @@ impl World {
             for x in 0..self.terrain[y].len() {
                 let beta = (x as f32 / self.width as f32) * TAU;
 
-                let value =
+                let random_noise =
                     self.random_noise_from_polar_coordinates(alpha, beta, RADIUS, offset)?;
 
                 let mut cell = &mut self.terrain[y][x];
 
-                let base_rainfall = Self::calculate_rainfall(value);
+                let base_rainfall = Self::calculate_rainfall(random_noise);
                 let altitude_factor = f32::clamp(
                     (cell.altitude / Self::MAX_ALTITUDE) * Self::RAINFALL_ALTITUDE_FACTOR,
                     0.0,
@@ -381,6 +391,45 @@ impl World {
             (raw_rainfall * Self::RAINFALL_SPAN) + Self::MIN_RAINFALL,
             0.0,
             Self::MAX_RAINFALL,
+        )
+    }
+
+    fn generate_temperature(&mut self) -> Result<(), CartesianError> {
+        let offset = Self::random_offset_vector();
+        const RADIUS: f32 = 2.0;
+
+        for y in 0..self.terrain.len() {
+            let alpha = (y as f32 / self.height as f32) * PI;
+            for x in 0..self.terrain[y].len() {
+                let beta = (x as f32 / self.width as f32) * TAU;
+
+                let random_noise =
+                    self.random_noise_from_polar_coordinates(alpha, beta, RADIUS, offset)?;
+
+                let cell = &mut self.terrain[y][x];
+
+                let altitude_factor = 1.0
+                    - f32::clamp(
+                        (cell.altitude / Self::MAX_ALTITUDE) * Self::TEMPERATURE_ALTITUDE_FACTOR,
+                        0.0,
+                        1.0,
+                    );
+
+                let latitude_modifer = (alpha * 0.8) + (random_noise * 0.2 * PI);
+                let base_temperature = Self::calculate_temperature(f32::sin(latitude_modifer));
+
+                cell.temperature = base_temperature * altitude_factor;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn calculate_temperature(raw_temperature: f32) -> f32 {
+        f32::clamp(
+            (raw_temperature * Self::TEMPERATURE_SPAN) + Self::MIN_TEMPERATURE,
+            0.0,
+            Self::MAX_TEMPERATURE,
         )
     }
 }
