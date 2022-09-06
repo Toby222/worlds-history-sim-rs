@@ -18,6 +18,8 @@ pub struct WorldManager {
     rainfall_visible: bool,
     #[cfg(feature = "render")]
     temperature_visible: bool,
+    #[cfg(feature = "render")]
+    terrain_as_contours: bool,
 }
 
 impl WorldManager {
@@ -28,6 +30,7 @@ impl WorldManager {
             world: None,
             rainfall_visible: false,
             temperature_visible: false,
+            terrain_as_contours: false,
         }
     }
 
@@ -51,6 +54,16 @@ impl WorldManager {
         self.temperature_visible = !self.temperature_visible;
     }
 
+    #[cfg(feature = "render")]
+    pub fn toggle_contours(&mut self) {
+        if self.terrain_as_contours {
+            debug!("Turning terrain contours off");
+        } else {
+            debug!("Turning terrain contours on");
+        }
+        self.terrain_as_contours = !self.terrain_as_contours;
+    }
+
     pub fn get_world(&self) -> Option<&World> {
         self.world.as_ref()
     }
@@ -65,7 +78,11 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     fn generate_color(&self, cell: &TerrainCell) -> Color {
-        let mut final_color = Self::altitude_color(cell.altitude);
+        let mut final_color = if self.terrain_as_contours {
+            Self::altitude_contour_color(cell.altitude)
+        } else {
+            Self::altitude_color(cell.altitude)
+        };
 
         if self.rainfall_visible {
             let rainfall_color = Self::rainfall_color(cell.rainfall);
@@ -106,7 +123,6 @@ impl WorldManager {
         final_color
     }
 
-    /*
     #[cfg(feature = "render")]
     fn altitude_color(altitude: f32) -> Color {
         if altitude < 0.0 {
@@ -117,7 +133,6 @@ impl WorldManager {
             Color::rgb(0.58 * mult, 0.29 * mult, 0.0)
         }
     }
-    */
 
     #[cfg(feature = "render")]
     fn altitude_contour_color(altitude: f32) -> Color {

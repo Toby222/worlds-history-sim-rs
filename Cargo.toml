@@ -2,6 +2,7 @@
 name = "worlds-sim-rust"
 version = "0.1.0"
 edition = "2021"
+resolver = "2"
 
 [features]
 debug = ["save/debug"]
