@@ -3,6 +3,7 @@ use bevy::{
     asset::AssetServer,
     ecs::system::Res,
     render::color::Color,
+    text::{Text, TextStyle},
     ui::{
         entity::{ButtonBundle, TextBundle},
         widget::Button,
@@ -34,13 +35,9 @@ pub(crate) fn toolbar_button_text(
     which: ToolbarButton,
 ) -> TextBundle {
     TextBundle {
-        text: bevy::text::Text::from_section(
-            match which {
-                ToolbarButton::Rainfall => "Toggle rainfall",
-                ToolbarButton::Temperature => "Toggle temperature",
-                ToolbarButton::Contours => "Toggle contours",
-            },
-            bevy::text::TextStyle {
+        text: Text::from_section(
+            which,
+            TextStyle {
                 font: asset_server.load("JuliaMono.ttf"),
                 font_size: 20.0,
                 color: Color::WHITE,

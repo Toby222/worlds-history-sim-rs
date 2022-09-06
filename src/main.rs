@@ -149,6 +149,9 @@ fn handle_toolbar_button(
                         debug!("Toggling contours");
                         world_manager.toggle_contours();
                     }
+                    ToolbarButton::GenerateWorld => todo!(),
+                    ToolbarButton::SaveWorld => todo!(),
+                    ToolbarButton::LoadWorld => todo!(),
                 }
                 refresh_world_texture(&mut images, &world_manager)
             }
@@ -380,33 +383,15 @@ fn generate_graphics(
                     ..default()
                 })
                 .with_children(|button_box| {
-                    _ = button_box
-                        .spawn_bundle(toolbar_button())
-                        .with_children(|button| {
-                            _ = button.spawn_bundle(toolbar_button_text(
-                                &asset_server,
-                                ToolbarButton::Rainfall,
-                            ));
-                        })
-                        .insert(ToolbarButton::Rainfall);
-                    _ = button_box
-                        .spawn_bundle(toolbar_button())
-                        .with_children(|button| {
-                            _ = button.spawn_bundle(toolbar_button_text(
-                                &asset_server,
-                                ToolbarButton::Temperature,
-                            ));
-                        })
-                        .insert(ToolbarButton::Temperature);
-                    _ = button_box
-                        .spawn_bundle(toolbar_button())
-                        .with_children(|button| {
-                            _ = button.spawn_bundle(toolbar_button_text(
-                                &asset_server,
-                                ToolbarButton::Contours,
-                            ));
-                        })
-                        .insert(ToolbarButton::Contours);
+                    ToolbarButton::ITEMS.iter().for_each(|&button_type| {
+                        _ = button_box
+                            .spawn_bundle(toolbar_button())
+                            .with_children(|button| {
+                                _ = button
+                                    .spawn_bundle(toolbar_button_text(&asset_server, button_type));
+                            })
+                            .insert(button_type)
+                    });
                 });
         });
 }
@@ -445,20 +430,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ = manager.new_world()?
     }
 
-    #[cfg(feature = "debug")]
-    {
-        _ = app.insert_resource(LogSettings {
-            level: Level::DEBUG,
-            ..default()
-        });
-    }
-    #[cfg(not(feature = "debug"))]
-    {
-        _ = app.insert_resource(LogSettings {
-            level: Level::WARN,
-            ..default()
-        });
-    }
+    _ = app.insert_resource(LogSettings {
+        #[cfg(feature = "debug")]
+        level: Level::DEBUG,
+        #[cfg(not(feature = "debug"))]
+        level: Level::WARN,
+        ..default()
+    });
 
     app.add_plugins(WorldPlugins).insert_resource(manager).run();
 
