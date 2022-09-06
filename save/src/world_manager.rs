@@ -1,6 +1,7 @@
 #[cfg(feature = "render")]
 use crate::TerrainCell;
 use crate::{World, WorldGenError};
+#[cfg(all(feature = "debug", feature = "render"))]
 use bevy::log::debug;
 #[cfg(feature = "render")]
 use bevy::{
@@ -28,14 +29,18 @@ impl WorldManager {
             #[cfg(feature = "render")]
             image_handle_id: HandleId::default::<Image>(),
             world: None,
+            #[cfg(feature = "render")]
             rainfall_visible: false,
+            #[cfg(feature = "render")]
             temperature_visible: false,
+            #[cfg(feature = "render")]
             terrain_as_contours: false,
         }
     }
 
     #[cfg(feature = "render")]
     pub fn toggle_rainfall(&mut self) {
+        #[cfg(feature = "debug")]
         if self.rainfall_visible {
             debug!("Turning rainfall off");
         } else {
@@ -46,6 +51,7 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     pub fn toggle_temperature(&mut self) {
+        #[cfg(feature = "debug")]
         if self.temperature_visible {
             debug!("Turning temperature off");
         } else {
@@ -56,6 +62,7 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     pub fn toggle_contours(&mut self) {
+        #[cfg(feature = "debug")]
         if self.terrain_as_contours {
             debug!("Turning terrain contours off");
         } else {

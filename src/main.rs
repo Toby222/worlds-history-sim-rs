@@ -32,25 +32,25 @@
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
 
+mod components;
 mod plugins;
-
-use std::fmt::Display;
+mod resources;
+mod ui_helpers;
 
 use bevy::{
     app::App,
-    log::{debug, LogSettings},
-    utils::tracing::Level,
+    log::LogSettings,
+    utils::{default, tracing::Level},
 };
 #[cfg(feature = "render")]
 use bevy::{
     asset::{AssetServer, Assets, Handle},
     core_pipeline::{
         core_2d::{Camera2d, Camera2dBundle},
-        core_3d::{Camera3d, Camera3dBundle},
+        core_3d::Camera3dBundle,
     },
     ecs::{
         change_detection::ResMut,
-        component::Component,
         query::{Changed, With},
         system::{Commands, Query, Res},
     },
@@ -70,22 +70,33 @@ use bevy::{
     text::Text,
     transform::components::{GlobalTransform, Transform},
     ui::{
-        entity::{ButtonBundle, NodeBundle, TextBundle},
-        widget::Button,
-        AlignItems, AlignSelf, FocusPolicy, Interaction, JustifyContent, PositionType, Size, Style,
-        UiColor, UiRect, Val,
+        entity::{NodeBundle, TextBundle},
+        AlignSelf, FocusPolicy, Interaction, JustifyContent, PositionType, Size, Style, UiColor,
+        UiRect, Val,
     },
-    utils::default,
     window::{CursorIcon, WindowDescriptor, Windows},
     winit::WinitSettings,
 };
+#[cfg(all(feature = "debug", feature = "render"))]
+use bevy::{
+    diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
+    log::debug,
+};
 #[cfg(feature = "render")]
-use plugins::PanCam;
+use components::{
+    markers::{InfoPanel, ToolbarButton},
+    third_party::PanCam,
+};
 use plugins::WorldPlugins;
+#[cfg(feature = "render")]
+use resources::CursorMapPosition;
 use save::*;
+#[cfg(feature = "render")]
+use ui_helpers::{toolbar_button, toolbar_button_text};
 
 #[cfg(feature = "render")]
 fn refresh_world_texture(images: &mut Assets<Image>, world_manager: &WorldManager) {
+    #[cfg(feature = "debug")]
     debug!("refreshing world texture");
     let image_handle = images.get_handle(world_manager.image_handle_id);
     images.get_mut(&image_handle).unwrap().data = world_manager.world_color_bytes();
@@ -94,121 +105,45 @@ fn refresh_world_texture(images: &mut Assets<Image>, world_manager: &WorldManage
 }
 
 #[cfg(feature = "render")]
-#[derive(Component)]
-struct RainfallButton;
-
-#[cfg(feature = "render")]
-#[derive(Component)]
-struct TemperatureButton;
-
-#[cfg(feature = "render")]
-#[derive(Component)]
-struct ContoursButton;
-
-#[cfg(feature = "render")]
-#[derive(Component)]
-struct InfoPanel;
-
-#[cfg(feature = "render")]
-#[derive(Default, Debug)]
-struct CursorMapPosition {
-    x: i32,
-    y: i32,
-}
-impl Display for CursorMapPosition {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("x: {}, y: {}", self.x, self.y))
-    }
-}
-
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
+#[cfg(feature = "render")]
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
+#[cfg(feature = "render")]
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.60, 0.35);
 #[cfg(feature = "render")]
-fn handle_rainfall_button(
+fn handle_toolbar_button(
     mut interaction_query: Query<
         '_,
         '_,
-        (&Interaction, &mut UiColor),
-        (Changed<Interaction>, With<RainfallButton>),
+        (&Interaction, &mut UiColor, &ToolbarButton),
+        Changed<Interaction>,
     >,
     mut windows: ResMut<'_, Windows>,
     mut images: ResMut<'_, Assets<Image>>,
     mut world_manager: ResMut<'_, WorldManager>,
 ) {
-    for (interaction, mut color) in &mut interaction_query {
+    for (interaction, mut color, toolbar_button) in &mut interaction_query {
         match *interaction {
             Interaction::Clicked => {
                 windows.primary_mut().set_cursor_icon(CursorIcon::Default);
                 *color = PRESSED_BUTTON.into();
-                debug!("Toggling rainfall");
-                world_manager.toggle_rainfall();
-                refresh_world_texture(&mut images, &world_manager)
-            }
-            Interaction::Hovered => {
-                windows.primary_mut().set_cursor_icon(CursorIcon::Hand);
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                windows.primary_mut().set_cursor_icon(CursorIcon::Default);
-                *color = NORMAL_BUTTON.into();
-            }
-        }
-    }
-}
-
-#[cfg(feature = "render")]
-fn handle_temperature_button(
-    mut interaction_query: Query<
-        '_,
-        '_,
-        (&Interaction, &mut UiColor),
-        (Changed<Interaction>, With<TemperatureButton>),
-    >,
-    mut windows: ResMut<'_, Windows>,
-    mut images: ResMut<'_, Assets<Image>>,
-    mut world_manager: ResMut<'_, WorldManager>,
-) {
-    for (interaction, mut color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Clicked => {
-                windows.primary_mut().set_cursor_icon(CursorIcon::Default);
-                *color = PRESSED_BUTTON.into();
-                debug!("Toggling temperature");
-                world_manager.toggle_temperature();
-                refresh_world_texture(&mut images, &world_manager)
-            }
-            Interaction::Hovered => {
-                windows.primary_mut().set_cursor_icon(CursorIcon::Hand);
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                windows.primary_mut().set_cursor_icon(CursorIcon::Default);
-                *color = NORMAL_BUTTON.into();
-            }
-        }
-    }
-}
-
-#[cfg(feature = "render")]
-fn handle_contours_button(
-    mut interaction_query: Query<
-        '_,
-        '_,
-        (&Interaction, &mut UiColor),
-        (Changed<Interaction>, With<ContoursButton>),
-    >,
-    mut windows: ResMut<'_, Windows>,
-    mut images: ResMut<'_, Assets<Image>>,
-    mut world_manager: ResMut<'_, WorldManager>,
-) {
-    for (interaction, mut color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Clicked => {
-                windows.primary_mut().set_cursor_icon(CursorIcon::Default);
-                *color = PRESSED_BUTTON.into();
-                debug!("Toggling contours");
-                world_manager.toggle_contours();
+                match toolbar_button {
+                    ToolbarButton::Rainfall => {
+                        #[cfg(feature = "debug")]
+                        debug!("Toggling rainfall");
+                        world_manager.toggle_rainfall();
+                    }
+                    ToolbarButton::Temperature => {
+                        #[cfg(feature = "debug")]
+                        debug!("Toggling temperature");
+                        world_manager.toggle_temperature();
+                    }
+                    ToolbarButton::Contours => {
+                        #[cfg(feature = "debug")]
+                        debug!("Toggling contours");
+                        world_manager.toggle_contours();
+                    }
+                }
                 refresh_world_texture(&mut images, &world_manager)
             }
             Interaction::Hovered => {
@@ -254,6 +189,7 @@ fn update_cursor_map_position(
     }
 }
 
+#[cfg(feature = "render")]
 const ROTATION_SPEED: f32 = 0.002;
 #[cfg(feature = "render")]
 fn rotate_planet(mut planet_transform: Query<'_, '_, &mut Transform, With<Handle<Mesh>>>) {
@@ -262,6 +198,7 @@ fn rotate_planet(mut planet_transform: Query<'_, '_, &mut Transform, With<Handle
 
 #[cfg(feature = "render")]
 fn update_info_panel(
+    #[cfg(feature = "debug")] diagnostics: Res<'_, Diagnostics>,
     cursor_position: Res<'_, CursorMapPosition>,
     world_manager: Res<'_, WorldManager>,
     mut text: Query<'_, '_, &mut Text, With<InfoPanel>>,
@@ -273,10 +210,27 @@ fn update_info_panel(
         && cursor_position.y < world.height
     {
         let cell = &world.terrain[cursor_position.y as usize][cursor_position.x as usize];
-        format!(
-            "Mouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}",
-            *cursor_position, cell.altitude, cell.rainfall, cell.temperature
-        )
+        #[cfg(feature = "debug")]
+        {
+            format!(
+                "FPS: {}\nMouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}",
+                match diagnostics.get_measurement(FrameTimeDiagnosticsPlugin::FPS) {
+                    None => f64::NAN,
+                    Some(fps) => fps.value,
+                },
+                *cursor_position,
+                cell.altitude,
+                cell.rainfall,
+                cell.temperature
+            )
+        }
+        #[cfg(not(feature = "debug"))]
+        {
+            format!(
+                "Mouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}",
+                *cursor_position, cell.altitude, cell.rainfall, cell.temperature
+            )
+        }
     } else {
         format!("Mouse position: {}\nOut of bounds", *cursor_position)
     };
@@ -412,84 +366,37 @@ fn generate_graphics(
                 })
                 .with_children(|button_box| {
                     _ = button_box
-                        .spawn_bundle(ButtonBundle {
-                            button: Button,
-                            style: Style {
-                                align_items: AlignItems::Center,
-                                justify_content: JustifyContent::Center,
-                                ..default()
-                            },
-                            color: NORMAL_BUTTON.into(),
-                            ..default()
-                        })
-                        .insert(RainfallButton)
+                        .spawn_bundle(toolbar_button())
                         .with_children(|button| {
-                            _ = button.spawn_bundle(TextBundle {
-                                text: bevy::text::Text::from_section(
-                                    "Toggle rainfall",
-                                    bevy::text::TextStyle {
-                                        font: asset_server.load("JuliaMono.ttf"),
-                                        font_size: 20.0,
-                                        color: Color::WHITE,
-                                    },
-                                ),
-                                ..default()
-                            });
-                        });
+                            _ = button.spawn_bundle(toolbar_button_text(
+                                &asset_server,
+                                ToolbarButton::Rainfall,
+                            ));
+                        })
+                        .insert(ToolbarButton::Rainfall);
                     _ = button_box
-                        .spawn_bundle(ButtonBundle {
-                            button: Button,
-                            style: Style {
-                                align_items: AlignItems::Center,
-                                justify_content: JustifyContent::Center,
-                                ..default()
-                            },
-                            color: NORMAL_BUTTON.into(),
-                            ..default()
-                        })
-                        .insert(TemperatureButton)
+                        .spawn_bundle(toolbar_button())
                         .with_children(|button| {
-                            _ = button.spawn_bundle(TextBundle {
-                                text: bevy::text::Text::from_section(
-                                    "Toggle temperature",
-                                    bevy::text::TextStyle {
-                                        font: asset_server.load("JuliaMono.ttf"),
-                                        font_size: 20.0,
-                                        color: Color::WHITE,
-                                    },
-                                ),
-                                ..default()
-                            });
-                        });
+                            _ = button.spawn_bundle(toolbar_button_text(
+                                &asset_server,
+                                ToolbarButton::Temperature,
+                            ));
+                        })
+                        .insert(ToolbarButton::Temperature);
                     _ = button_box
-                        .spawn_bundle(ButtonBundle {
-                            button: Button,
-                            style: Style {
-                                align_items: AlignItems::Center,
-                                justify_content: JustifyContent::Center,
-                                ..default()
-                            },
-                            color: NORMAL_BUTTON.into(),
-                            ..default()
-                        })
-                        .insert(ContoursButton)
+                        .spawn_bundle(toolbar_button())
                         .with_children(|button| {
-                            _ = button.spawn_bundle(TextBundle {
-                                text: bevy::text::Text::from_section(
-                                    "Toggle contours",
-                                    bevy::text::TextStyle {
-                                        font: asset_server.load("JuliaMono.ttf"),
-                                        font_size: 20.0,
-                                        color: Color::WHITE,
-                                    },
-                                ),
-                                ..default()
-                            });
-                        });
+                            _ = button.spawn_bundle(toolbar_button_text(
+                                &asset_server,
+                                ToolbarButton::Contours,
+                            ));
+                        })
+                        .insert(ToolbarButton::Contours);
                 });
         });
 }
 
+#[cfg(feature = "render")]
 const WORLD_SCALE: i32 = 3;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new();
@@ -510,9 +417,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             })
             .insert_resource(CursorMapPosition::default())
             .add_startup_system(generate_graphics)
-            .add_system(handle_rainfall_button)
-            .add_system(handle_temperature_button)
-            .add_system(handle_contours_button)
+            .add_system(handle_toolbar_button)
             .add_system(update_cursor_map_position)
             .add_system(update_info_panel)
             .add_system(rotate_planet);

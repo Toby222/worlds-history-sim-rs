@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 debug = []
 render = ["bevy/render"]
+default = ["render", "debug"]
 
 [dependencies.noise]
 version = "0.7.0"

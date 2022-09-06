@@ -40,6 +40,10 @@ impl PluginGroup for WorldPlugins {
                 .add(UiPlugin::default())
                 .add(PbrPlugin::default())
                 .add(PanCamPlugin::default());
+            #[cfg(feature = "debug")]
+            {
+                _ = group.add(FrameTimeDiagnosticsPlugin::default());
+            }
         }
         #[cfg(not(feature = "render"))]
         {
