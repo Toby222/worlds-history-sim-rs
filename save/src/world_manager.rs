@@ -1,14 +1,20 @@
 #[cfg(feature = "render")]
 use crate::TerrainCell;
 use crate::{World, WorldGenError};
+use bevy::log::error;
 #[cfg(all(feature = "debug", feature = "render"))]
-use bevy::log::debug;
+use bevy::log::{debug, info};
 #[cfg(feature = "render")]
 use bevy::{
     asset::HandleId,
     render::{color::Color, texture::Image},
 };
 use rand::random;
+use std::{
+    fs::File,
+    io::{Read, Write},
+    path::Path,
+};
 
 #[derive(Debug)]
 pub struct WorldManager {
@@ -35,6 +41,43 @@ impl WorldManager {
             temperature_visible: false,
             #[cfg(feature = "render")]
             terrain_as_contours: false,
+        }
+    }
+
+    pub fn save_world<P: AsRef<Path>>(&self, path: P) {
+        let world = match self.get_world() {
+            Some(world) => world,
+            None => {
+                info!("No world to save");
+                return;
+            }
+        };
+        let serialized = match ron::to_string(world) {
+            Ok(serialized) => serialized,
+            Err(err) => {
+                error!("Could not serialize world: {}", err);
+                return;
+            }
+        };
+        File::create(path).unwrap().write_all(serialized.as_bytes());
+    }
+
+    pub fn load_world<P: AsRef<Path>>(&mut self, path: P) {
+        let mut file = match File::open(path) {
+            Ok(file) => file,
+            Err(err) => {
+                error!("Could not open world file: {}", err);
+                return;
+            }
+        };
+        let mut buf = String::new();
+        file.read_to_string(&mut buf);
+        match ron::from_str(buf.as_str()) {
+            Ok(world) => self.world = Some(world),
+            Err(err) => {
+                error!("Could not deserialize world: {}", err);
+                return;
+            }
         }
     }
 

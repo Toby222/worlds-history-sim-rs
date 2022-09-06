@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::{
     error::Error,
     f32::consts::{PI, TAU},
@@ -39,7 +40,7 @@ impl Display for WorldGenError {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct World {
     pub width: i32,
     pub height: i32,
@@ -48,6 +49,7 @@ pub struct World {
     pub terrain: Vec<Vec<TerrainCell>>,
     continent_offsets: [Vec2; World::NUM_CONTINENTS as usize],
     continent_widths: [f32; World::NUM_CONTINENTS as usize],
+    #[serde(skip)]
     perlin: Perlin,
 }
 impl Debug for World {
@@ -73,20 +75,22 @@ impl Debug for World {
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Biome {
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub(crate) struct Biome {
     pub altitude: f32,
     pub rainfall: f32,
     pub temperature: f32,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct TerrainCell {
     pub altitude: f32,
     pub rainfall: f32,
     pub temperature: f32,
 
+    #[serde(skip)]
     pub rain_accumulated: f32,
+    #[serde(skip)]
     pub previous_rain_accumulated: f32,
 }
 

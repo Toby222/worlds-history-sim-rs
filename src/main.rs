@@ -149,9 +149,23 @@ fn handle_toolbar_button(
                         debug!("Toggling contours");
                         world_manager.toggle_contours();
                     }
-                    ToolbarButton::GenerateWorld => todo!(),
-                    ToolbarButton::SaveWorld => todo!(),
-                    ToolbarButton::LoadWorld => todo!(),
+                    ToolbarButton::GenerateWorld => {
+                        #[cfg(feature = "debug")]
+                        debug!("Generating new world");
+                        _ = world_manager
+                            .new_world()
+                            .expect("Failed to generate new world");
+                    }
+                    ToolbarButton::SaveWorld => {
+                        #[cfg(feature = "debug")]
+                        debug!("Saving world");
+                        _ = world_manager.save_world("planet.ron");
+                    }
+                    ToolbarButton::LoadWorld => {
+                        #[cfg(feature = "debug")]
+                        debug!("Loading world");
+                        _ = world_manager.load_world("planet.ron");
+                    }
                 }
                 refresh_world_texture(&mut images, &world_manager)
             }
