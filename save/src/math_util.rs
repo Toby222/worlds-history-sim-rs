@@ -62,11 +62,10 @@ pub fn random_point_in_sphere(radius: f32) -> Vec3A {
     let x = rng.gen_range(-radius..radius);
     let y = rng.gen_range(-radius..radius);
     let z = rng.gen_range(-radius..radius);
-    let mult = 1.0 / (x * x + y * y + z * z).sqrt();
-
     if x == 0.0 && y == 0.0 && z == 0.0 {
-        return Vec3A::X;
+        return Vec3A::ZERO;
     }
+    let mult = 1.0 / (x * x + y * y + z * z).sqrt();
 
     Vec3A::new(mult * x, mult * y, mult * z)
 }

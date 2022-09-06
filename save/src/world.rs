@@ -127,8 +127,8 @@ impl World {
     pub const RAINFALL_SPAN: f32 = Self::MAX_RAINFALL - Self::MIN_RAINFALL;
     pub const RAINFALL_ALTITUDE_FACTOR: f32 = 1.0;
 
-    pub const MIN_TEMPERATURE: f32 = -100.0;
-    pub const MAX_TEMPERATURE: f32 = 100.0;
+    pub const MIN_TEMPERATURE: f32 = -50.0;
+    pub const MAX_TEMPERATURE: f32 = 30.0;
     pub const TEMPERATURE_SPAN: f32 = Self::MAX_TEMPERATURE - Self::MIN_RAINFALL;
     pub const TEMPERATURE_ALTITUDE_FACTOR: f32 = 1.0;
 
@@ -418,17 +418,13 @@ impl World {
 
                 let cell = &mut self.terrain[y][x];
 
-                let altitude_factor = 1.0
-                    - f32::clamp(
-                        (cell.altitude / Self::MAX_ALTITUDE) * Self::TEMPERATURE_ALTITUDE_FACTOR,
-                        0.0,
-                        1.0,
-                    );
+                let altitude_factor = (cell.altitude / Self::MAX_ALTITUDE)
+                    * (2.5 * Self::TEMPERATURE_ALTITUDE_FACTOR);
 
                 let latitude_modifer = (alpha * 0.8) + (random_noise * 0.2 * PI);
                 let base_temperature = Self::calculate_temperature(f32::sin(latitude_modifer));
 
-                cell.temperature = base_temperature * altitude_factor;
+                cell.temperature = base_temperature * (1.0 - altitude_factor);
             }
         }
 
@@ -438,7 +434,7 @@ impl World {
     fn calculate_temperature(raw_temperature: f32) -> f32 {
         f32::clamp(
             (raw_temperature * Self::TEMPERATURE_SPAN) + Self::MIN_TEMPERATURE,
-            0.0,
+            Self::MIN_TEMPERATURE,
             Self::MAX_TEMPERATURE,
         )
     }

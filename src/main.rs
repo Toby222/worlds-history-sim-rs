@@ -182,7 +182,7 @@ fn update_cursor_map_position(
         let window_size = Vec2::new(window.width(), window.height());
 
         // GPU coordinates [-1..1]
-        let ndc = (screen_position / window_size) * 2.0;
+        let ndc = (screen_position / window_size) * 2.0 - Vec2::ONE;
 
         // Matrix to reverse camera transform
         let ndc_to_world = transform.compute_matrix() * camera.projection_matrix().inverse();
@@ -190,8 +190,9 @@ fn update_cursor_map_position(
         let world_position =
             ndc_to_world.project_point3(ndc.extend(-1.0)).truncate() / WORLD_SCALE as f32;
 
-        cursor_map_position.x = world_position.x.round() as i32;
-        cursor_map_position.y = world_manager.world().height - world_position.y.round() as i32;
+        let world = world_manager.world();
+        cursor_map_position.x = world_position.x as i32 + world.width / 2 - 1;
+        cursor_map_position.y = world.height / 2 - world_position.y as i32 - 1;
     }
 }
 
@@ -219,10 +220,10 @@ fn update_info_panel(
         #[cfg(feature = "debug")]
         {
             format!(
-                "FPS: {}\nMouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}",
+                "FPS: ~{}\nMouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}",
                 match diagnostics.get_measurement(FrameTimeDiagnosticsPlugin::FPS) {
                     None => f64::NAN,
-                    Some(fps) => fps.value,
+                    Some(fps) => fps.value.round(),
                 },
                 *cursor_position,
                 cell.altitude,
@@ -238,7 +239,14 @@ fn update_info_panel(
             )
         }
     } else {
-        format!("Mouse position: {}\nOut of bounds", *cursor_position)
+        format!(
+            "FPS: ~{}\nMouse position: {}\nOut of bounds",
+            match diagnostics.get_measurement(FrameTimeDiagnosticsPlugin::FPS) {
+                None => f64::NAN,
+                Some(fps) => fps.value.round(),
+            },
+            *cursor_position
+        )
     };
 }
 
@@ -404,7 +412,7 @@ fn generate_graphics(
 }
 
 #[cfg(feature = "render")]
-const WORLD_SCALE: i32 = 3;
+const WORLD_SCALE: i32 = 4;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new();
     let mut manager = WorldManager::new();
