@@ -25,6 +25,7 @@ define_enum!(ToolbarButton {
     Contours,
 });
 
+#[cfg(feature = "render")]
 impl From<ToolbarButton> for &'static str {
     fn from(button: ToolbarButton) -> Self {
         match button {
@@ -37,6 +38,7 @@ impl From<ToolbarButton> for &'static str {
         }
     }
 }
+#[cfg(feature = "render")]
 impl From<&ToolbarButton> for &'static str {
     fn from(button: &ToolbarButton) -> Self {
         match button {
@@ -50,12 +52,14 @@ impl From<&ToolbarButton> for &'static str {
     }
 }
 
+#[cfg(feature = "render")]
 impl From<ToolbarButton> for String {
     fn from(button: ToolbarButton) -> Self {
         <&'static str>::from(button).into()
     }
 }
 
+#[cfg(feature = "render")]
 impl From<&ToolbarButton> for String {
     fn from(button: &ToolbarButton) -> Self {
         <&'static str>::from(button).into()

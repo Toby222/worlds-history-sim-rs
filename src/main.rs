@@ -93,10 +93,10 @@ use components::{
     markers::{InfoPanel, ToolbarButton},
     third_party::PanCam,
 };
+use planet::WorldManager;
 use plugins::WorldPlugins;
 #[cfg(feature = "render")]
 use resources::CursorMapPosition;
-use save::*;
 #[cfg(feature = "render")]
 use ui_helpers::{toolbar_button, toolbar_button_text};
 
@@ -104,8 +104,16 @@ use ui_helpers::{toolbar_button, toolbar_button_text};
 fn refresh_world_texture(images: &mut Assets<Image>, world_manager: &WorldManager) {
     #[cfg(feature = "debug")]
     debug!("refreshing world texture");
-    let image_handle = images.get_handle(world_manager.image_handle_id);
-    images.get_mut(&image_handle).unwrap().data = world_manager.world_color_bytes();
+    let image_handle = images.get_handle(world_manager.image_handle_id.expect("No image handle"));
+    let world_image = images
+        .get_mut(&image_handle)
+        .expect("Image handle pointing to non-existing texture");
+    world_image.resize(Extent3d {
+        width: world_manager.world().width,
+        height: world_manager.world().height,
+        depth_or_array_layers: 1,
+    });
+    world_image.data = world_manager.world_color_bytes();
 
     // TODO: Update Icosphere material... try to find out why it doesn't automatically=
 }
@@ -138,16 +146,19 @@ fn handle_toolbar_button(
                         #[cfg(feature = "debug")]
                         debug!("Toggling rainfall");
                         world_manager.toggle_rainfall();
+                        refresh_world_texture(&mut images, &world_manager);
                     }
                     ToolbarButton::Temperature => {
                         #[cfg(feature = "debug")]
                         debug!("Toggling temperature");
                         world_manager.toggle_temperature();
+                        refresh_world_texture(&mut images, &world_manager);
                     }
                     ToolbarButton::Contours => {
                         #[cfg(feature = "debug")]
                         debug!("Toggling contours");
                         world_manager.toggle_contours();
+                        refresh_world_texture(&mut images, &world_manager);
                     }
                     ToolbarButton::GenerateWorld => {
                         #[cfg(feature = "debug")]
@@ -155,6 +166,7 @@ fn handle_toolbar_button(
                         _ = world_manager
                             .new_world()
                             .expect("Failed to generate new world");
+                        refresh_world_texture(&mut images, &world_manager);
                     }
                     ToolbarButton::SaveWorld => {
                         #[cfg(feature = "debug")]
@@ -164,10 +176,10 @@ fn handle_toolbar_button(
                     ToolbarButton::LoadWorld => {
                         #[cfg(feature = "debug")]
                         debug!("Loading world");
-                        _ = world_manager.load_world("planet.ron");
+                        _ = world_manager.load_world("planet.ron", &mut images);
+                        refresh_world_texture(&mut images, &world_manager);
                     }
                 }
-                refresh_world_texture(&mut images, &world_manager)
             }
             Interaction::Hovered => {
                 windows.primary_mut().set_cursor_icon(CursorIcon::Hand);
@@ -208,8 +220,8 @@ fn update_cursor_map_position(
             ndc_to_world.project_point3(ndc.extend(-1.0)).truncate() / WORLD_SCALE as f32;
 
         let world = world_manager.world();
-        cursor_map_position.x = world_position.x as i32 + world.width / 2 - 1;
-        cursor_map_position.y = world.height / 2 - world_position.y as i32 - 1;
+        cursor_map_position.x = world.width as i32 / 2 + f32::ceil(world_position.x) as i32 - 1;
+        cursor_map_position.y = world.height as i32 / 2 + f32::ceil(world_position.y) as i32 - 1;
     }
 }
 
@@ -229,11 +241,12 @@ fn update_info_panel(
 ) {
     let world = world_manager.world();
     text.single_mut().sections[0].value = if cursor_position.x >= 0
-        && cursor_position.x < world.width
+        && cursor_position.x < world.width as i32
         && cursor_position.y >= 0
-        && cursor_position.y < world.height
+        && cursor_position.y < world.height as i32
     {
         let cell = &world.terrain[cursor_position.y as usize][cursor_position.x as usize];
+
         #[cfg(feature = "debug")]
         {
             format!(
@@ -248,6 +261,7 @@ fn update_info_panel(
                 cell.temperature
             )
         }
+
         #[cfg(not(feature = "debug"))]
         {
             format!(
@@ -256,14 +270,22 @@ fn update_info_panel(
             )
         }
     } else {
-        format!(
-            "FPS: ~{}\nMouse position: {}\nOut of bounds",
-            match diagnostics.get_measurement(FrameTimeDiagnosticsPlugin::FPS) {
-                None => f64::NAN,
-                Some(fps) => fps.value.round(),
-            },
-            *cursor_position
-        )
+        #[cfg(feature = "debug")]
+        {
+            format!(
+                "FPS: ~{}\nMouse position: {}\nOut of bounds",
+                match diagnostics.get_measurement(FrameTimeDiagnosticsPlugin::FPS) {
+                    None => f64::NAN,
+                    Some(fps) => fps.value.round(),
+                },
+                *cursor_position
+            )
+        }
+
+        #[cfg(not(feature = "debug"))]
+        {
+            format!("Mouse position: {}\nOut of bounds", *cursor_position)
+        }
     };
 }
 
@@ -278,8 +300,8 @@ fn generate_graphics(
 ) {
     let world = world_manager.world();
     let custom_sprite_size = Vec2 {
-        x: (WORLD_SCALE * world.width) as f32,
-        y: (WORLD_SCALE * world.height) as f32,
+        x: (WORLD_SCALE * world.width as i32) as f32,
+        y: (WORLD_SCALE * world.height as i32) as f32,
     };
 
     let image_handle = images.add(Image {
@@ -287,8 +309,8 @@ fn generate_graphics(
         texture_descriptor: TextureDescriptor {
             label: None,
             size: Extent3d {
-                width: world.width as u32,
-                height: world.height as u32,
+                width: world.width,
+                height: world.height,
                 ..default()
             },
             dimension: TextureDimension::D2,
@@ -299,7 +321,7 @@ fn generate_graphics(
         },
         ..default()
     });
-    world_manager.image_handle_id = image_handle.id;
+    world_manager.image_handle_id = Some(image_handle.id);
 
     #[cfg(feature = "planet_view")]
     {
@@ -338,9 +360,12 @@ fn generate_graphics(
 
     _ = commands
         .spawn_bundle(Camera2dBundle { ..default() })
-        .insert(PanCam::default());
+        .insert(PanCam {
+            max_scale: Some(80.0),
+            ..default()
+        });
     _ = commands.spawn_bundle(SpriteBundle {
-        texture: images.get_handle(world_manager.image_handle_id),
+        texture: images.get_handle(world_manager.image_handle_id.unwrap()),
         sprite: Sprite {
             custom_size: Some(custom_sprite_size),
             ..default()
@@ -423,8 +448,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Use nearest-neighbor rendering for cripsier pixels
             .insert_resource(ImageSettings::default_nearest())
             .insert_resource(WindowDescriptor {
-                width: (WORLD_SCALE * world.width) as f32,
-                height: (WORLD_SCALE * world.height) as f32,
+                width: (WORLD_SCALE * world.width as i32) as f32,
+                height: (WORLD_SCALE * world.height as i32) as f32,
                 title: String::from("World-RS"),
                 resizable: true,
                 ..default()

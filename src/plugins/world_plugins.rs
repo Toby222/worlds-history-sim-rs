@@ -3,7 +3,7 @@ pub(crate) struct WorldPlugins;
 use bevy::{
     app::{PluginGroup, PluginGroupBuilder},
     core::CorePlugin,
-    diagnostic::{DiagnosticsPlugin, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    diagnostic::{DiagnosticsPlugin, LogDiagnosticsPlugin},
     log::LogPlugin,
     time::TimePlugin,
 };
@@ -43,10 +43,6 @@ impl PluginGroup for WorldPlugins {
                 use bevy::pbr::PbrPlugin;
                 _ = group.add(PbrPlugin::default())
             }
-            #[cfg(feature = "debug")]
-            {
-                _ = group.add(FrameTimeDiagnosticsPlugin::default());
-            }
         }
         #[cfg(not(feature = "render"))]
         {
@@ -54,9 +50,12 @@ impl PluginGroup for WorldPlugins {
             _ = group.add(ScheduleRunnerPlugin::default());
         }
 
-        _ = group
-            .add(DiagnosticsPlugin::default())
-            .add(FrameTimeDiagnosticsPlugin::default())
-            .add(LogDiagnosticsPlugin::default());
+        _ = group.add(DiagnosticsPlugin::default());
+        #[cfg(all(feature = "debug"))]
+        {
+            use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+            _ = group.add(FrameTimeDiagnosticsPlugin::default());
+        }
+        _ = group.add(LogDiagnosticsPlugin::default());
     }
 }
