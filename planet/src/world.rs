@@ -325,33 +325,49 @@ impl World {
 
     fn generate_rainfall(&mut self) -> Result<(), CartesianError> {
         info!("Generating rainfall");
-        // let offset = World::random_offset_vector(&mut self.rng);
+        const RADIUS: f32 = 2.0;
+        let offset = World::random_offset_vector(&mut self.rng);
 
         let height = self.terrain.len();
         for y in 0..height {
             info!("Rainfall: {}/{}", y, height);
             let alpha = (y as f32 / self.height as f32) * PI;
-            let latitude_modifier = f32::sin(2.0 * alpha);
 
             let width = self.terrain[y].len();
             for x in 0..width {
-                // let beta = (x as f32 / self.width as f32) * TAU;
+                let beta = (x as f32 / self.width as f32) * TAU;
 
-                let diff_cell_x =
-                    (width + x + f32::floor(latitude_modifier * width as f32 / 50.0) as usize)
+                let random_noise =
+                    self.random_noise_from_polar_coordinates(alpha, beta, RADIUS, offset)?;
+
+                let latitude_factor = (alpha * 0.9) + (random_noise * 0.2 * PI) - 0.1;
+                let latitude_modifier_1 = (1.5 * f32::sin(latitude_factor)) - 0.5;
+                let latitude_modifier_2 = f32::cos(latitude_factor);
+
+                let offset_cell_x =
+                    (width + x + f32::floor(latitude_modifier_2 * width as f32 / 20.0) as usize)
                         % width;
-                let diff_cell = &self.terrain[y][diff_cell_x];
-                let diff_altitude = f32::max(0.0, diff_cell.altitude);
+                let offset_cell_2_x =
+                    (width + x + f32::floor(latitude_modifier_2 * width as f32 / 10.0) as usize)
+                        % width;
 
-                let mut cell = &mut self.terrain[y][x];
+                let offset_cell = &self.terrain[y][offset_cell_x];
+                let offset_altitude = f32::max(0.0, offset_cell.altitude);
+
+                let offset_cell_2 = &self.terrain[y][offset_cell_2_x];
+                let offset_altitude_2 = f32::max(0.0, offset_cell_2.altitude);
+
+                let cell = &mut self.terrain[y][x];
                 let altitude = f32::max(0.0, cell.altitude);
 
-                let altitude_factor =
-                    f32::max(0.0, 2.0 * (altitude - diff_altitude) / World::MAX_ALTITUDE);
+                let altitude_modifier =
+                    (altitude - (offset_altitude * 1.5) - (offset_altitude_2 * 1.5))
+                        / World::MAX_ALTITUDE;
 
+                let normalized_rainfall = mix_values(latitude_modifier_1, altitude_modifier, 0.6);
                 let rainfall = f32::min(
                     World::MAX_RAINFALL,
-                    World::calculate_rainfall(altitude_factor),
+                    World::calculate_rainfall(normalized_rainfall),
                 );
 
                 cell.rainfall = rainfall;

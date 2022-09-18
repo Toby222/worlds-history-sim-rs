@@ -308,11 +308,14 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     fn rainfall_contour_color(&self, rainfall: f32) -> Color {
-        Color::rgb(
-            0.0,
-            f32::floor((rainfall / self.world().max_rainfall) / 0.1),
-            0.0,
-        )
+        let mut shade_value = 1.0;
+        let value = rainfall / self.world().max_rainfall;
+
+        while shade_value > value {
+            shade_value -= 0.1;
+        }
+
+        Color::rgb(0.0, shade_value, 0.0)
     }
 
     #[cfg(feature = "render")]
