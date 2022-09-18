@@ -2,28 +2,29 @@
 use bevy::ecs::component::Component;
 
 #[cfg(feature = "render")]
-macro_rules! define_enum {
-    ($Name:ident { $($Variant:ident),* $(,)* }) =>
+macro_rules! toolbar_enum {
+    ($($Variant:ident),*$(,)?) =>
     {
         #[derive(Debug, Component, Copy, Clone)]
-        pub enum $Name {
+        pub enum ToolbarButton {
             $($Variant),*,
         }
-        impl $Name {
-            pub const ITEMS: &'static [$Name] = &[$($Name::$Variant),*];
+        impl ToolbarButton {
+            pub const BUTTONS: &'static [ToolbarButton] = &[$(ToolbarButton::$Variant),*];
         }
     }
 }
 
 #[cfg(feature = "render")]
-define_enum!(ToolbarButton {
+toolbar_enum!(
     GenerateWorld,
     SaveWorld,
     LoadWorld,
     Rainfall,
     Temperature,
+    Biomes,
     Contours,
-});
+);
 
 #[cfg(feature = "render")]
 impl From<ToolbarButton> for &'static str {
@@ -32,6 +33,7 @@ impl From<ToolbarButton> for &'static str {
             ToolbarButton::Rainfall => "Toggle rainfall",
             ToolbarButton::Temperature => "Toggle temperature",
             ToolbarButton::Contours => "Toggle contours",
+            ToolbarButton::Biomes => "Toggle biomes",
             ToolbarButton::GenerateWorld => "Generate new world",
             ToolbarButton::SaveWorld => "Save",
             ToolbarButton::LoadWorld => "Load",
@@ -41,14 +43,7 @@ impl From<ToolbarButton> for &'static str {
 #[cfg(feature = "render")]
 impl From<&ToolbarButton> for &'static str {
     fn from(button: &ToolbarButton) -> Self {
-        match button {
-            ToolbarButton::Rainfall => "Toggle rainfall",
-            ToolbarButton::Temperature => "Toggle temperature",
-            ToolbarButton::Contours => "Toggle contours",
-            ToolbarButton::GenerateWorld => "Generate new world",
-            ToolbarButton::SaveWorld => "Save",
-            ToolbarButton::LoadWorld => "Load",
-        }
+        (*button).into()
     }
 }
 

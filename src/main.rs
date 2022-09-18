@@ -82,6 +82,7 @@ use bevy::{
     window::{CursorIcon, WindowDescriptor, Windows},
     winit::WinitSettings,
 };
+use planet::Biome;
 
 #[cfg(all(feature = "debug", feature = "render"))]
 use bevy::{
@@ -152,6 +153,12 @@ fn handle_toolbar_button(
                         #[cfg(feature = "debug")]
                         debug!("Toggling temperature");
                         world_manager.toggle_temperature();
+                        refresh_world_texture(&mut images, &world_manager);
+                    }
+                    ToolbarButton::Biomes => {
+                        #[cfg(feature = "debug")]
+                        debug!("Toggling biomes");
+                        world_manager.toggle_biomes();
                         refresh_world_texture(&mut images, &world_manager);
                     }
                     ToolbarButton::Contours => {
@@ -250,7 +257,7 @@ fn update_info_panel(
         #[cfg(feature = "debug")]
         {
             format!(
-                "FPS: ~{}\nMouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}",
+                "FPS: ~{}\nMouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}\n\n{}",
                 match diagnostics.get_measurement(FrameTimeDiagnosticsPlugin::FPS) {
                     None => f64::NAN,
                     Some(fps) => fps.value.round(),
@@ -258,15 +265,40 @@ fn update_info_panel(
                 *cursor_position,
                 cell.altitude,
                 cell.rainfall,
-                cell.temperature
+                cell.temperature,
+                cell.biome_presences
+                    .iter()
+                    .map(|(biome_type, presence)| {
+                        format!(
+                            "Biome: {} ({:.2}%)",
+                            (<Biome>::from(biome_type).name),
+                            presence * 100.0
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n")
             )
         }
 
         #[cfg(not(feature = "debug"))]
         {
             format!(
-                "Mouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}",
-                *cursor_position, cell.altitude, cell.rainfall, cell.temperature
+                "Mouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}\n{}",
+                *cursor_position,
+                cell.altitude,
+                cell.rainfall,
+                cell.temperature,
+                cell.biome_presences
+                    .iter()
+                    .map(|(biome_type, presence)| {
+                        format!(
+                            "Biome: {} ({:.2}%)",
+                            (<Biome>::from(biome_type).name),
+                            presence * 100.0
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n")
             )
         }
     } else {
@@ -422,7 +454,7 @@ fn generate_graphics(
                     ..default()
                 })
                 .with_children(|button_box| {
-                    ToolbarButton::ITEMS.iter().for_each(|&button_type| {
+                    ToolbarButton::BUTTONS.iter().for_each(|&button_type| {
                         _ = button_box
                             .spawn_bundle(toolbar_button())
                             .with_children(|button| {

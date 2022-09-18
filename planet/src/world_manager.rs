@@ -1,6 +1,6 @@
 #[cfg(feature = "render")]
 use crate::TerrainCell;
-use crate::{World, WorldGenError};
+use crate::{Biome, World, WorldGenError};
 #[cfg(all(feature = "debug", feature = "render"))]
 use bevy::log::debug;
 use bevy::log::warn;
@@ -94,6 +94,8 @@ pub struct WorldManager {
     #[cfg(feature = "render")]
     temperature_visible: bool,
     #[cfg(feature = "render")]
+    biomes_visible: bool,
+    #[cfg(feature = "render")]
     contours: bool,
 }
 
@@ -107,6 +109,8 @@ impl WorldManager {
             rainfall_visible: false,
             #[cfg(feature = "render")]
             temperature_visible: false,
+            #[cfg(feature = "render")]
+            biomes_visible: false,
             #[cfg(feature = "render")]
             contours: true,
         }
@@ -209,6 +213,17 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
+    pub fn toggle_biomes(&mut self) {
+        #[cfg(feature = "debug")]
+        if self.temperature_visible {
+            debug!("Turning biomes off");
+        } else {
+            debug!("Turning biomes on");
+        }
+        self.biomes_visible = !self.biomes_visible;
+    }
+
+    #[cfg(feature = "render")]
     pub fn toggle_contours(&mut self) {
         #[cfg(feature = "debug")]
         if self.contours {
@@ -237,6 +252,10 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     fn generate_color(&self, cell: &TerrainCell) -> Color {
+        if self.biomes_visible {
+            return WorldManager::biome_color(cell);
+        }
+
         let altitude_color = if self.contours {
             WorldManager::altitude_contour_color(cell.altitude)
         } else {
@@ -245,9 +264,9 @@ impl WorldManager {
 
         let mut layer_count = 1.0;
 
-        let mut r = altitude_color.r();
-        let mut g = altitude_color.g();
-        let mut b = altitude_color.b();
+        let mut red = altitude_color.r();
+        let mut green = altitude_color.g();
+        let mut blue = altitude_color.b();
 
         if self.rainfall_visible {
             layer_count += 1.0;
@@ -258,9 +277,9 @@ impl WorldManager {
             //     WorldManager::rainfall_color(cell.rainfall)
             // };
 
-            r += rainfall_color.r();
-            g += rainfall_color.g();
-            b += rainfall_color.b();
+            red += rainfall_color.r();
+            green += rainfall_color.g();
+            blue += rainfall_color.b();
         }
 
         if self.temperature_visible {
@@ -272,12 +291,12 @@ impl WorldManager {
             //     WorldManager::temperature_color(cell.temperature)
             // };
 
-            r += temperature_color.r();
-            g += temperature_color.g();
-            b += temperature_color.b();
+            red += temperature_color.r();
+            green += temperature_color.g();
+            blue += temperature_color.b();
         }
 
-        Color::rgb(r / layer_count, g / layer_count, b / layer_count)
+        Color::rgb(red / layer_count, green / layer_count, blue / layer_count)
     }
 
     #[cfg(feature = "render")]
@@ -319,15 +338,6 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
-    fn rainfall_color(rainfall: f32) -> Color {
-        if rainfall <= 0.0 {
-            Color::BLACK
-        } else {
-            Color::rgb(0.0, rainfall / World::MAX_RAINFALL, 0.0)
-        }
-    }
-
-    #[cfg(feature = "render")]
     fn temperature_contour_color(&self, temperature: f32) -> Color {
         let mut shade_value = 1.0;
         let value = (temperature - self.world().min_temperature)
@@ -341,14 +351,19 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
-    fn temperature_color(temperature: f32) -> Color {
-        let normalized_temperature = WorldManager::normalize_temperature(temperature);
-        Color::rgb(normalized_temperature, 1.0 - normalized_temperature, 0.0)
-    }
+    fn biome_color(cell: &TerrainCell) -> Color {
+        cell.biome_presences
+            .iter()
+            .fold(Color::BLACK, |color, (biome_type, presence)| {
+                let biome: Biome = (*biome_type).into();
+                let biome_color = biome.color;
 
-    #[cfg(feature = "render")]
-    fn normalize_temperature(temperature: f32) -> f32 {
-        (temperature - World::MIN_TEMPERATURE) / World::TEMPERATURE_SPAN
+                Color::rgb(
+                    color.r() + (biome_color.r() * presence),
+                    color.g() + (biome_color.g() * presence),
+                    color.b() + (biome_color.b() * presence),
+                )
+            })
     }
 
     #[cfg(feature = "render")]

@@ -7,7 +7,7 @@ use std::{
 
 // TODO: Logging doesn't seem to work here? Figure out why and fix
 
-use crate::perlin;
+use crate::{biome::BiomeType, perlin, Biome};
 use bevy::{log::info, math::Vec3A, prelude::Vec2, utils::default};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
@@ -66,22 +66,12 @@ pub struct World {
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct Biome {
-    pub altitude: f32,
-    pub rainfall: f32,
-    pub temperature: f32,
-}
-
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct TerrainCell {
     pub altitude: f32,
     pub rainfall: f32,
     pub temperature: f32,
 
-    #[serde(skip)]
-    pub rain_accumulated: f32,
-    #[serde(skip)]
-    pub previous_rain_accumulated: f32,
+    pub biome_presences: Vec<(BiomeType, f32)>,
 }
 
 impl World {
@@ -106,33 +96,32 @@ impl World {
         }
     }
 
-    pub const NUM_CONTINENTS: u8 = 7;
-    pub const CONTINENT_FACTOR: f32 = 0.75;
-    pub const CONTINENT_MIN_WIDTH_FACTOR: f32 = 3.0;
-    pub const CONTINENT_MAX_WIDTH_FACTOR: f32 = 7.0;
+    const NUM_CONTINENTS: u8 = 7;
+    const CONTINENT_MIN_WIDTH_FACTOR: f32 = 3.0;
+    const CONTINENT_MAX_WIDTH_FACTOR: f32 = 7.0;
 
-    pub const MIN_ALTITUDE: f32 = -10000.0;
-    pub const MAX_ALTITUDE: f32 = 10000.0;
-    pub const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
+    pub(crate) const MIN_ALTITUDE: f32 = -15000.0;
+    pub(crate) const MAX_ALTITUDE: f32 = 15000.0;
+    const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
 
-    pub const MOUNTAIN_RANGE_MIX_FACTOR: f32 = 0.075;
-    pub const MOUNTAIN_RANGE_WIDTH_FACTOR: f32 = 25.0;
+    const MOUNTAIN_RANGE_MIX_FACTOR: f32 = 0.075;
+    const MOUNTAIN_RANGE_WIDTH_FACTOR: f32 = 25.0;
 
-    pub const TERRAIN_NOISE_FACTOR_1: f32 = 0.2;
-    pub const TERRAIN_NOISE_FACTOR_2: f32 = 0.15;
-    pub const TERRAIN_NOISE_FACTOR_3: f32 = 0.1;
+    const TERRAIN_NOISE_FACTOR_1: f32 = 0.15;
+    const TERRAIN_NOISE_FACTOR_2: f32 = 0.15;
+    const TERRAIN_NOISE_FACTOR_3: f32 = 0.1;
+    const TERRAIN_NOISE_FACTOR_4: f32 = 2.5;
 
-    pub const MIN_RAINFALL: f32 = 0.0;
-    pub const MAX_RAINFALL: f32 = 5000.0;
-    pub const RAINFALL_SPAN: f32 = World::MAX_RAINFALL - World::MIN_RAINFALL;
-    pub const RAINFALL_ALTITUDE_FACTOR: f32 = 1.0;
-    pub const RAINFALL_DRYNESS_FACTOR: f32 = 0.001;
-    pub const RAINFALL_DRYNESS_OFFSET: f32 = World::RAINFALL_DRYNESS_FACTOR * World::MAX_RAINFALL;
+    pub(crate) const MIN_RAINFALL: f32 = 0.0;
+    pub(crate) const MAX_RAINFALL: f32 = 7500.0;
+    const RAINFALL_SPAN: f32 = World::MAX_RAINFALL - World::MIN_RAINFALL;
+    const RAINFALL_DRYNESS_FACTOR: f32 = 0.005;
+    const RAINFALL_DRYNESS_OFFSET: f32 = World::RAINFALL_DRYNESS_FACTOR * World::MAX_RAINFALL;
 
-    pub const MIN_TEMPERATURE: f32 = -50.0;
-    pub const MAX_TEMPERATURE: f32 = 30.0;
-    pub const TEMPERATURE_SPAN: f32 = World::MAX_TEMPERATURE - World::MIN_RAINFALL;
-    pub const TEMPERATURE_ALTITUDE_FACTOR: f32 = 1.0;
+    pub(crate) const MIN_TEMPERATURE: f32 = -60.0;
+    pub(crate) const MAX_TEMPERATURE: f32 = 30.0;
+    const TEMPERATURE_SPAN: f32 = World::MAX_TEMPERATURE - World::MIN_TEMPERATURE;
+    const TEMPERATURE_ALTITUDE_FACTOR: f32 = 1.0;
 
     pub fn generate(&mut self) -> Result<(), WorldGenError> {
         if let Err(err) = self.generate_altitude() {
@@ -144,6 +133,8 @@ impl World {
         if let Err(err) = self.generate_temperature() {
             return Err(WorldGenError::CartesianError(err));
         }
+
+        self.generate_biomes();
 
         Ok(())
     }
@@ -254,9 +245,16 @@ impl World {
                         World::MOUNTAIN_RANGE_MIX_FACTOR,
                     )),
                     value_3,
-                    World::TERRAIN_NOISE_FACTOR_1 * 1.5,
-                ) * mix_values(1.0, value_4, World::TERRAIN_NOISE_FACTOR_2 * 1.5)
-                    * mix_values(1.0, value_5, World::TERRAIN_NOISE_FACTOR_3 * 1.5);
+                    World::TERRAIN_NOISE_FACTOR_1 * World::TERRAIN_NOISE_FACTOR_4,
+                ) * mix_values(
+                    1.0,
+                    value_4,
+                    World::TERRAIN_NOISE_FACTOR_2 * World::TERRAIN_NOISE_FACTOR_4,
+                ) * mix_values(
+                    1.0,
+                    value_5,
+                    World::TERRAIN_NOISE_FACTOR_3 * World::TERRAIN_NOISE_FACTOR_4,
+                );
 
                 let mut value_d = mix_values(value_a, value_c, 0.25);
                 value_d = mix_values(value_d, value_c, 0.1);
@@ -364,10 +362,10 @@ impl World {
                     (altitude - (offset_altitude * 1.5) - (offset_altitude_2 * 1.5))
                         / World::MAX_ALTITUDE;
 
-                let normalized_rainfall = mix_values(latitude_modifier_1, altitude_modifier, 0.6);
+                let rainfall_value = mix_values(latitude_modifier_1, altitude_modifier, 0.63);
                 let rainfall = f32::min(
                     World::MAX_RAINFALL,
-                    World::calculate_rainfall(normalized_rainfall),
+                    World::calculate_rainfall(rainfall_value),
                 );
 
                 cell.rainfall = rainfall;
@@ -408,17 +406,14 @@ impl World {
 
                 let cell = &mut self.terrain[y][x];
 
+                let latitude_modifer = mix_values(alpha, random_noise * PI, 0.1);
                 let altitude_factor = f32::max(
                     0.0,
-                    (cell.altitude / World::MAX_ALTITUDE)
-                        * 2.5
-                        * World::TEMPERATURE_ALTITUDE_FACTOR,
+                    (cell.altitude / World::MAX_ALTITUDE) * World::TEMPERATURE_ALTITUDE_FACTOR,
                 );
+                let temperature =
+                    World::calculate_temperature(f32::sin(latitude_modifer) - altitude_factor);
 
-                let latitude_modifer = (alpha * 0.8) + (random_noise * 0.2 * PI);
-                let base_temperature = World::calculate_temperature(f32::sin(latitude_modifer));
-
-                let temperature = base_temperature * (1.0 - altitude_factor);
                 cell.temperature = temperature;
 
                 if temperature > self.max_temperature {
@@ -439,5 +434,84 @@ impl World {
             World::MIN_TEMPERATURE,
             World::MAX_TEMPERATURE,
         )
+    }
+
+    fn generate_biomes(&mut self) {
+        for y in 0..self.terrain.len() {
+            for x in 0..self.terrain[y].len() {
+                let cell = &self.terrain[y][x];
+
+                let mut total_presence = 0.0;
+
+                let mut biome_presences = vec![];
+                for biome_type in BiomeType::BIOMES {
+                    let presence = self.biome_presence(cell, &biome_type.into());
+
+                    if presence <= 0.0 {
+                        continue;
+                    }
+
+                    biome_presences.push((*biome_type, presence));
+                    total_presence += presence;
+                }
+                self.terrain[y][x].biome_presences = biome_presences
+                    .iter()
+                    .map(|(biome_type, presence)| (*biome_type, presence / total_presence))
+                    .collect();
+            }
+        }
+    }
+
+    fn biome_presence(&self, cell: &TerrainCell, biome: &Biome) -> f32 {
+        let mut presence = 0.0;
+        let altitude_diff = cell.altitude - biome.min_altitude;
+        if altitude_diff < 0.0 {
+            return 0.0;
+        }
+
+        let altitude_factor = altitude_diff / (biome.max_altitude - biome.min_altitude);
+        if altitude_factor > 1.0 {
+            return 0.0;
+        };
+
+        presence += if altitude_factor > 0.5 {
+            1.0 - altitude_factor
+        } else {
+            altitude_factor
+        };
+
+        let rainfall_diff = cell.rainfall - biome.min_rainfall;
+        if rainfall_diff < 0.0 {
+            return 0.0;
+        }
+
+        let rainfall_factor = rainfall_diff / (biome.max_rainfall - biome.min_rainfall);
+        if rainfall_factor > 1.0 {
+            return 0.0;
+        }
+
+        presence += if rainfall_factor > 0.5 {
+            1.0 - rainfall_factor
+        } else {
+            rainfall_factor
+        };
+
+        let temperature_diff = cell.temperature - biome.min_temperature;
+        if temperature_diff < 0.0 {
+            return 0.0;
+        }
+
+        let temperature_factor = temperature_diff / (biome.max_temperature - biome.min_temperature);
+        if temperature_factor > 1.0 {
+            return 0.0;
+        }
+
+        presence += if temperature_factor > 0.5 {
+            1.0 - temperature_factor
+        } else {
+            temperature_factor
+        };
+
+        presence
     }
 }
