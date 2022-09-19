@@ -35,7 +35,7 @@
 pub mod world;
 pub use world::*;
 pub mod biome;
-pub use biome::Biome;
+pub use biome::*;
 pub mod world_manager;
 pub use world_manager::*;
 pub mod math_util;

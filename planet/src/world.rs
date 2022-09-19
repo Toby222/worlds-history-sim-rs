@@ -1,12 +1,12 @@
 // TODO: Logging doesn't seem to work here? Figure out why and fix
 use {
     crate::{
-        biome::BiomeType,
         cartesian_coordinates,
         mix_values,
         perlin,
         random_point_in_sphere,
         Biome,
+        BiomeType,
         CartesianError,
         RepeatNum,
     },

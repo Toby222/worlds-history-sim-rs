@@ -4,7 +4,7 @@ use bevy::log::debug;
 use bevy::utils::default;
 #[cfg(feature = "render")]
 use {
-    crate::TerrainCell,
+    crate::{Biome, TerrainCell},
     bevy::{
         asset::{Assets, HandleId},
         render::render_resource::Extent3d,
@@ -12,7 +12,7 @@ use {
     },
 };
 use {
-    crate::{Biome, World, WorldGenError},
+    crate::{World, WorldGenError},
     bevy::log::warn,
     rand::random,
     std::{

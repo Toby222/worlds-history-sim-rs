@@ -100,6 +100,7 @@ use {
         markers::{InfoPanel, ToolbarButton},
         third_party::PanCam,
     },
+    planet::Biome,
     resources::CursorMapPosition,
     ui_helpers::{toolbar_button, toolbar_button_text},
 };
@@ -109,7 +110,7 @@ use {
         log::LogSettings,
         utils::{default, tracing::Level},
     },
-    planet::{Biome, WorldManager},
+    planet::WorldManager,
     plugins::WorldPlugins,
 };
 
