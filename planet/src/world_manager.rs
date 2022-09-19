@@ -1,9 +1,7 @@
 #[cfg(feature = "render")]
 use crate::TerrainCell;
-use crate::{Biome, World, WorldGenError};
 #[cfg(all(feature = "debug", feature = "render"))]
 use bevy::log::debug;
-use bevy::log::warn;
 #[cfg(feature = "debug")]
 use bevy::utils::default;
 #[cfg(feature = "render")]
@@ -12,13 +10,17 @@ use bevy::{
     render::render_resource::Extent3d,
     render::{color::Color, texture::Image},
 };
-use rand::random;
-use std::{
-    error::Error,
-    fmt::Display,
-    fs::File,
-    io::{self, Read, Write},
-    path::Path,
+use {
+    crate::{Biome, World, WorldGenError},
+    bevy::log::warn,
+    rand::random,
+    std::{
+        error::Error,
+        fmt::Display,
+        fs::File,
+        io::{self, Read, Write},
+        path::Path,
+    },
 };
 
 #[derive(Debug)]
@@ -86,17 +88,17 @@ impl Display for SaveError {
 
 #[derive(Debug)]
 pub struct WorldManager {
+    world:               Option<World>,
     #[cfg(feature = "render")]
     pub image_handle_id: Option<HandleId>,
-    world: Option<World>,
     #[cfg(feature = "render")]
-    rainfall_visible: bool,
+    rainfall_visible:    bool,
     #[cfg(feature = "render")]
     temperature_visible: bool,
     #[cfg(feature = "render")]
-    biomes_visible: bool,
+    biomes_visible:      bool,
     #[cfg(feature = "render")]
-    contours: bool,
+    contours:            bool,
 }
 
 impl WorldManager {
@@ -122,14 +124,14 @@ impl WorldManager {
             None => {
                 warn!("No world to save");
                 return Err(SaveError::MissingWorld);
-            }
+            },
         };
         #[cfg(feature = "debug")]
         let serialized = match ron::ser::to_string_pretty(world, default()) {
             Ok(serialized) => serialized,
             Err(err) => {
                 return Err(SaveError::SerializationError(err));
-            }
+            },
         };
 
         #[cfg(not(feature = "debug"))]
@@ -137,7 +139,7 @@ impl WorldManager {
             Ok(serialized) => serialized,
             Err(err) => {
                 return Err(SaveError::SerializationError(err));
-            }
+            },
         };
 
         match File::create(path).unwrap().write_all(serialized.as_bytes()) {
@@ -155,14 +157,14 @@ impl WorldManager {
             Ok(file) => file,
             Err(err) => {
                 return Err(LoadError::MissingSave(err));
-            }
+            },
         };
         let mut buf = String::new();
         match file.read_to_string(&mut buf) {
-            Ok(_) => {}
+            Ok(_) => {},
             Err(err) => {
                 return Err(LoadError::MissingSave(err));
-            }
+            },
         };
         match ron::from_str(buf.as_str()) {
             Ok(world) => {
@@ -185,7 +187,7 @@ impl WorldManager {
                         });
                 }
                 Ok(())
-            }
+            },
             Err(err) => Err(LoadError::InvalidSave(err)),
         }
     }
@@ -237,6 +239,7 @@ impl WorldManager {
     pub fn get_world(&self) -> Option<&World> {
         self.world.as_ref()
     }
+
     pub fn world(&self) -> &World {
         assert!(self.world.is_some(), "No world.");
         self.get_world().unwrap()
@@ -377,7 +380,7 @@ impl WorldManager {
                     .iter()
                     .map(|cell| self.generate_color(cell))
                     .collect()
-            }
+            },
         }
     }
 

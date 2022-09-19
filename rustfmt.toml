@@ -1,0 +1,11 @@
+imports_granularity = "One"
+group_imports = "One"
+enum_discrim_align_threshold = 15
+imports_layout = "HorizontalVertical"
+match_block_trailing_comma = true
+newline_style = "Native"
+reorder_impl_items = true
+struct_field_align_threshold = 20
+use_field_init_shorthand = true
+use_try_shorthand = true
+wrap_comments = true

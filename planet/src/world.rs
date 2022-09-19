@@ -1,17 +1,24 @@
-use serde::{Deserialize, Serialize};
-use std::{
-    error::Error,
-    f32::consts::{PI, TAU},
-    fmt::{Debug, Display},
-};
-
 // TODO: Logging doesn't seem to work here? Figure out why and fix
-
-use crate::{biome::BiomeType, perlin, Biome};
-use bevy::{log::info, math::Vec3A, prelude::Vec2, utils::default};
-use rand::{rngs::StdRng, Rng, SeedableRng};
-
-use crate::{cartesian_coordinates, mix_values, random_point_in_sphere, CartesianError, RepeatNum};
+use {
+    crate::{
+        biome::BiomeType,
+        cartesian_coordinates,
+        mix_values,
+        perlin,
+        random_point_in_sphere,
+        Biome,
+        CartesianError,
+        RepeatNum,
+    },
+    bevy::{log::info, math::Vec3A, prelude::Vec2, utils::default},
+    rand::{rngs::StdRng, Rng, SeedableRng},
+    serde::{Deserialize, Serialize},
+    std::{
+        error::Error,
+        f32::consts::{PI, TAU},
+        fmt::{Debug, Display},
+    },
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum WorldGenError {
@@ -42,39 +49,61 @@ impl Display for WorldGenError {
 
 #[derive(Debug, Serialize)]
 pub struct World {
-    pub width: u32,
+    pub width:  u32,
     pub height: u32,
-    pub seed: u32,
+    pub seed:   u32,
 
-    pub terrain: Vec<Vec<TerrainCell>>,
+    pub terrain:           Vec<Vec<TerrainCell>>,
     pub continent_offsets: [Vec2; World::NUM_CONTINENTS as usize],
-    pub continent_widths: [f32; World::NUM_CONTINENTS as usize],
+    pub continent_widths:  [f32; World::NUM_CONTINENTS as usize],
     #[serde(skip)]
-    pub max_altitude: f32,
+    pub max_altitude:      f32,
     #[serde(skip)]
-    pub min_altitude: f32,
+    pub min_altitude:      f32,
     #[serde(skip)]
-    pub max_rainfall: f32,
+    pub max_rainfall:      f32,
     #[serde(skip)]
-    pub min_rainfall: f32,
+    pub min_rainfall:      f32,
     #[serde(skip)]
-    pub max_temperature: f32,
+    pub max_temperature:   f32,
     #[serde(skip)]
-    pub min_temperature: f32,
+    pub min_temperature:   f32,
     #[serde(skip)]
-    pub rng: StdRng,
+    pub rng:               StdRng,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct TerrainCell {
-    pub altitude: f32,
-    pub rainfall: f32,
+    pub altitude:    f32,
+    pub rainfall:    f32,
     pub temperature: f32,
 
     pub biome_presences: Vec<(BiomeType, f32)>,
 }
 
 impl World {
+    const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
+    const CONTINENT_MAX_WIDTH_FACTOR: f32 = 7.0;
+    const CONTINENT_MIN_WIDTH_FACTOR: f32 = 3.0;
+    pub(crate) const MAX_ALTITUDE: f32 = 15000.0;
+    pub(crate) const MAX_RAINFALL: f32 = 7500.0;
+    pub(crate) const MAX_TEMPERATURE: f32 = 30.0;
+    pub(crate) const MIN_ALTITUDE: f32 = -15000.0;
+    pub(crate) const MIN_RAINFALL: f32 = 0.0;
+    pub(crate) const MIN_TEMPERATURE: f32 = -60.0;
+    const MOUNTAIN_RANGE_MIX_FACTOR: f32 = 0.075;
+    const MOUNTAIN_RANGE_WIDTH_FACTOR: f32 = 25.0;
+    const NUM_CONTINENTS: u8 = 7;
+    const RAINFALL_DRYNESS_FACTOR: f32 = 0.005;
+    const RAINFALL_DRYNESS_OFFSET: f32 = World::RAINFALL_DRYNESS_FACTOR * World::MAX_RAINFALL;
+    const RAINFALL_SPAN: f32 = World::MAX_RAINFALL - World::MIN_RAINFALL;
+    const TEMPERATURE_ALTITUDE_FACTOR: f32 = 1.0;
+    const TEMPERATURE_SPAN: f32 = World::MAX_TEMPERATURE - World::MIN_TEMPERATURE;
+    const TERRAIN_NOISE_FACTOR_1: f32 = 0.15;
+    const TERRAIN_NOISE_FACTOR_2: f32 = 0.15;
+    const TERRAIN_NOISE_FACTOR_3: f32 = 0.1;
+    const TERRAIN_NOISE_FACTOR_4: f32 = 2.5;
+
     pub fn new(width: u32, height: u32, seed: u32) -> World {
         World {
             width,
@@ -95,33 +124,6 @@ impl World {
             rng: StdRng::seed_from_u64(seed as u64),
         }
     }
-
-    const NUM_CONTINENTS: u8 = 7;
-    const CONTINENT_MIN_WIDTH_FACTOR: f32 = 3.0;
-    const CONTINENT_MAX_WIDTH_FACTOR: f32 = 7.0;
-
-    pub(crate) const MIN_ALTITUDE: f32 = -15000.0;
-    pub(crate) const MAX_ALTITUDE: f32 = 15000.0;
-    const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
-
-    const MOUNTAIN_RANGE_MIX_FACTOR: f32 = 0.075;
-    const MOUNTAIN_RANGE_WIDTH_FACTOR: f32 = 25.0;
-
-    const TERRAIN_NOISE_FACTOR_1: f32 = 0.15;
-    const TERRAIN_NOISE_FACTOR_2: f32 = 0.15;
-    const TERRAIN_NOISE_FACTOR_3: f32 = 0.1;
-    const TERRAIN_NOISE_FACTOR_4: f32 = 2.5;
-
-    pub(crate) const MIN_RAINFALL: f32 = 0.0;
-    pub(crate) const MAX_RAINFALL: f32 = 7500.0;
-    const RAINFALL_SPAN: f32 = World::MAX_RAINFALL - World::MIN_RAINFALL;
-    const RAINFALL_DRYNESS_FACTOR: f32 = 0.005;
-    const RAINFALL_DRYNESS_OFFSET: f32 = World::RAINFALL_DRYNESS_FACTOR * World::MAX_RAINFALL;
-
-    pub(crate) const MIN_TEMPERATURE: f32 = -60.0;
-    pub(crate) const MAX_TEMPERATURE: f32 = 30.0;
-    const TEMPERATURE_SPAN: f32 = World::MAX_TEMPERATURE - World::MIN_TEMPERATURE;
-    const TEMPERATURE_ALTITUDE_FACTOR: f32 = 1.0;
 
     pub fn generate(&mut self) -> Result<(), WorldGenError> {
         if let Err(err) = self.generate_altitude() {

@@ -37,11 +37,6 @@ mod plugins;
 mod resources;
 mod ui_helpers;
 
-use bevy::{
-    app::App,
-    log::LogSettings,
-    utils::{default, tracing::Level},
-};
 #[cfg(all(feature = "render", feature = "planet_view"))]
 use bevy::{
     asset::Handle,
@@ -67,7 +62,11 @@ use bevy::{
         camera::{Camera, RenderTarget},
         color::Color,
         render_resource::{
-            Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
+            Extent3d,
+            TextureDescriptor,
+            TextureDimension,
+            TextureFormat,
+            TextureUsages,
         },
         texture::{Image, ImageSettings},
     },
@@ -76,14 +75,20 @@ use bevy::{
     transform::components::GlobalTransform,
     ui::{
         entity::{NodeBundle, TextBundle},
-        AlignSelf, FocusPolicy, Interaction, JustifyContent, PositionType, Size, Style, UiColor,
-        UiRect, Val,
+        AlignSelf,
+        FocusPolicy,
+        Interaction,
+        JustifyContent,
+        PositionType,
+        Size,
+        Style,
+        UiColor,
+        UiRect,
+        Val,
     },
     window::{CursorIcon, WindowDescriptor, Windows},
     winit::WinitSettings,
 };
-use planet::Biome;
-
 #[cfg(all(feature = "debug", feature = "render"))]
 use bevy::{
     diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
@@ -94,12 +99,19 @@ use components::{
     markers::{InfoPanel, ToolbarButton},
     third_party::PanCam,
 };
-use planet::WorldManager;
-use plugins::WorldPlugins;
 #[cfg(feature = "render")]
 use resources::CursorMapPosition;
 #[cfg(feature = "render")]
 use ui_helpers::{toolbar_button, toolbar_button_text};
+use {
+    bevy::{
+        app::App,
+        log::LogSettings,
+        utils::{default, tracing::Level},
+    },
+    planet::{Biome, WorldManager},
+    plugins::WorldPlugins,
+};
 
 #[cfg(feature = "render")]
 fn refresh_world_texture(images: &mut Assets<Image>, world_manager: &WorldManager) {
@@ -110,13 +122,14 @@ fn refresh_world_texture(images: &mut Assets<Image>, world_manager: &WorldManage
         .get_mut(&image_handle)
         .expect("Image handle pointing to non-existing texture");
     world_image.resize(Extent3d {
-        width: world_manager.world().width,
-        height: world_manager.world().height,
+        width:                 world_manager.world().width,
+        height:                world_manager.world().height,
         depth_or_array_layers: 1,
     });
     world_image.data = world_manager.world_color_bytes();
 
-    // TODO: Update Icosphere material... try to find out why it doesn't automatically=
+    // TODO: Update Icosphere material. Try to find out why it doesn't
+    // automatically
 }
 
 #[cfg(feature = "render")]
@@ -148,25 +161,25 @@ fn handle_toolbar_button(
                         debug!("Toggling rainfall");
                         world_manager.toggle_rainfall();
                         refresh_world_texture(&mut images, &world_manager);
-                    }
+                    },
                     ToolbarButton::Temperature => {
                         #[cfg(feature = "debug")]
                         debug!("Toggling temperature");
                         world_manager.toggle_temperature();
                         refresh_world_texture(&mut images, &world_manager);
-                    }
+                    },
                     ToolbarButton::Biomes => {
                         #[cfg(feature = "debug")]
                         debug!("Toggling biomes");
                         world_manager.toggle_biomes();
                         refresh_world_texture(&mut images, &world_manager);
-                    }
+                    },
                     ToolbarButton::Contours => {
                         #[cfg(feature = "debug")]
                         debug!("Toggling contours");
                         world_manager.toggle_contours();
                         refresh_world_texture(&mut images, &world_manager);
-                    }
+                    },
                     ToolbarButton::GenerateWorld => {
                         #[cfg(feature = "debug")]
                         debug!("Generating new world");
@@ -174,28 +187,28 @@ fn handle_toolbar_button(
                             .new_world()
                             .expect("Failed to generate new world");
                         refresh_world_texture(&mut images, &world_manager);
-                    }
+                    },
                     ToolbarButton::SaveWorld => {
                         #[cfg(feature = "debug")]
                         debug!("Saving world");
                         _ = world_manager.save_world("planet.ron");
-                    }
+                    },
                     ToolbarButton::LoadWorld => {
                         #[cfg(feature = "debug")]
                         debug!("Loading world");
                         _ = world_manager.load_world("planet.ron", &mut images);
                         refresh_world_texture(&mut images, &world_manager);
-                    }
+                    },
                 }
-            }
+            },
             Interaction::Hovered => {
                 windows.primary_mut().set_cursor_icon(CursorIcon::Hand);
                 *color = HOVERED_BUTTON.into();
-            }
+            },
             Interaction::None => {
                 windows.primary_mut().set_cursor_icon(CursorIcon::Default);
                 *color = NORMAL_BUTTON.into();
-            }
+            },
         }
     }
 }
@@ -339,17 +352,17 @@ fn generate_graphics(
     let image_handle = images.add(Image {
         data: world_manager.world_color_bytes(),
         texture_descriptor: TextureDescriptor {
-            label: None,
-            size: Extent3d {
+            label:           None,
+            size:            Extent3d {
                 width: world.width,
                 height: world.height,
                 ..default()
             },
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba32Float,
+            dimension:       TextureDimension::D2,
+            format:          TextureFormat::Rgba32Float,
             mip_level_count: 1,
-            sample_count: 1,
-            usage: TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING,
+            sample_count:    1,
+            usage:           TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING,
         },
         ..default()
     });
@@ -372,7 +385,7 @@ fn generate_graphics(
         });
         _ = commands.spawn_bundle(PbrBundle {
             mesh: meshes.add(Mesh::from(Icosphere {
-                radius: 2.0,
+                radius:       2.0,
                 subdivisions: 9,
             })),
             material: materials.add(images.get_handle(world_manager.image_handle_id).into()),
@@ -431,9 +444,9 @@ fn generate_graphics(
                             text: Text::from_section(
                                 "Info Panel",
                                 bevy::text::TextStyle {
-                                    font: asset_server.load("JuliaMono.ttf"),
+                                    font:      asset_server.load("JuliaMono.ttf"),
                                     font_size: 15.0,
-                                    color: Color::WHITE,
+                                    color:     Color::WHITE,
                                 },
                             ),
                             ..default()

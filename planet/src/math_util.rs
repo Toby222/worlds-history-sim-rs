@@ -1,11 +1,12 @@
-use std::{
-    error::Error,
-    f32::consts::{PI, TAU},
-    fmt::{Debug, Display},
+use {
+    bevy::math::Vec3A,
+    rand::{rngs::StdRng, Rng},
+    std::{
+        error::Error,
+        f32::consts::{PI, TAU},
+        fmt::{Debug, Display},
+    },
 };
-
-use bevy::math::Vec3A;
-use rand::{rngs::StdRng, Rng};
 
 #[derive(Debug, Copy, Clone)]
 pub enum CartesianError {
@@ -29,7 +30,7 @@ impl Display for CartesianError {
         match self {
             CartesianError::InvalidAlpha(alpha) => {
                 f.write_fmt(format_args!("Alpha value must be [0..PI], was {}", alpha))
-            }
+            },
         }
     }
 }

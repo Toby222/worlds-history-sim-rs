@@ -1,28 +1,28 @@
-use std::fmt::{self, Formatter};
-
-use rand::{rngs::StdRng, SeedableRng};
-use serde::{
-    de::{Error, MapAccess, SeqAccess, Visitor},
-    Deserialize,
+use {
+    crate::{TerrainCell, World},
+    rand::{rngs::StdRng, SeedableRng},
+    serde::{
+        de::{Error, MapAccess, SeqAccess, Visitor},
+        Deserialize,
+    },
+    std::fmt::{self, Formatter},
 };
 
-use crate::{TerrainCell, World};
-
 struct WorldTerrainAttributes {
-    max_altitude: f32,
-    min_altitude: f32,
-    max_rainfall: f32,
-    min_rainfall: f32,
+    max_altitude:    f32,
+    min_altitude:    f32,
+    max_rainfall:    f32,
+    min_rainfall:    f32,
     max_temperature: f32,
     min_temperature: f32,
 }
 impl Default for WorldTerrainAttributes {
     fn default() -> Self {
         Self {
-            max_altitude: World::MIN_ALTITUDE,
-            min_altitude: World::MAX_ALTITUDE,
-            max_rainfall: World::MIN_RAINFALL,
-            min_rainfall: World::MAX_RAINFALL,
+            max_altitude:    World::MIN_ALTITUDE,
+            min_altitude:    World::MAX_ALTITUDE,
+            max_rainfall:    World::MIN_RAINFALL,
+            min_rainfall:    World::MAX_RAINFALL,
             max_temperature: World::MIN_TEMPERATURE,
             min_temperature: World::MAX_TEMPERATURE,
         }
@@ -148,37 +148,37 @@ impl<'de> Deserialize<'de> for World {
                                 return Err(Error::duplicate_field("width"));
                             }
                             width = Some(map.next_value()?);
-                        }
+                        },
                         Field::Height => {
                             if height.is_some() {
                                 return Err(Error::duplicate_field("height"));
                             }
                             height = Some(map.next_value()?);
-                        }
+                        },
                         Field::Seed => {
                             if seed.is_some() {
                                 return Err(Error::duplicate_field("seed"));
                             }
                             seed = Some(map.next_value()?);
-                        }
+                        },
                         Field::Terrain => {
                             if terrain.is_some() {
                                 return Err(Error::duplicate_field("terrain"));
                             }
                             terrain = Some(map.next_value()?);
-                        }
+                        },
                         Field::ContinentOffsets => {
                             if continent_offsets.is_some() {
                                 return Err(Error::duplicate_field("continent_offsets"));
                             }
                             continent_offsets = Some(map.next_value()?);
-                        }
+                        },
                         Field::ContinentWidths => {
                             if continent_widths.is_some() {
                                 return Err(Error::duplicate_field("continent_widths"));
                             }
                             continent_widths = Some(map.next_value()?);
-                        }
+                        },
                     }
                 }
 

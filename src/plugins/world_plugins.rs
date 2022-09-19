@@ -17,12 +17,22 @@ impl PluginGroup for WorldPlugins {
 
         #[cfg(feature = "render")]
         {
-            use bevy::{
-                asset::AssetPlugin, core_pipeline::CorePipelinePlugin, hierarchy::HierarchyPlugin,
-                input::InputPlugin, render::RenderPlugin, sprite::SpritePlugin, text::TextPlugin,
-                transform::TransformPlugin, ui::UiPlugin, window::WindowPlugin, winit::WinitPlugin,
+            use {
+                bevy::{
+                    asset::AssetPlugin,
+                    core_pipeline::CorePipelinePlugin,
+                    hierarchy::HierarchyPlugin,
+                    input::InputPlugin,
+                    render::RenderPlugin,
+                    sprite::SpritePlugin,
+                    text::TextPlugin,
+                    transform::TransformPlugin,
+                    ui::UiPlugin,
+                    window::WindowPlugin,
+                    winit::WinitPlugin,
+                },
+                bevy_pancam::PanCamPlugin,
             };
-            use bevy_pancam::PanCamPlugin;
 
             _ = group
                 .add(TransformPlugin::default())
