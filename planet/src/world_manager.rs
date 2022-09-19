@@ -1,14 +1,15 @@
-#[cfg(feature = "render")]
-use crate::TerrainCell;
 #[cfg(all(feature = "debug", feature = "render"))]
 use bevy::log::debug;
 #[cfg(feature = "debug")]
 use bevy::utils::default;
 #[cfg(feature = "render")]
-use bevy::{
-    asset::{Assets, HandleId},
-    render::render_resource::Extent3d,
-    render::{color::Color, texture::Image},
+use {
+    crate::TerrainCell,
+    bevy::{
+        asset::{Assets, HandleId},
+        render::render_resource::Extent3d,
+        render::{color::Color, texture::Image},
+    },
 };
 use {
     crate::{Biome, World, WorldGenError},

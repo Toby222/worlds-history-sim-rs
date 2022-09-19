@@ -1,19 +1,19 @@
 #[cfg(feature = "render")]
-use crate::{components::markers::ToolbarButton, NORMAL_BUTTON};
-#[cfg(feature = "render")]
-use bevy::{
-    asset::AssetServer,
-    ecs::system::Res,
-    render::color::Color,
-    text::{Text, TextStyle},
-    ui::{
-        entity::{ButtonBundle, TextBundle},
-        widget::Button,
-        AlignItems,
-        JustifyContent,
-        Style,
+use {
+    crate::{components::markers::ToolbarButton, NORMAL_BUTTON},
+    bevy::{
+        asset::Handle,
+        render::color::Color,
+        text::{Font, Text, TextStyle},
+        ui::{
+            entity::{ButtonBundle, TextBundle},
+            widget::Button,
+            AlignItems,
+            JustifyContent,
+            Style,
+        },
+        utils::default,
     },
-    utils::default,
 };
 
 #[cfg(feature = "render")]
@@ -31,17 +31,14 @@ pub(crate) fn toolbar_button() -> ButtonBundle {
 }
 
 #[cfg(feature = "render")]
-pub(crate) fn toolbar_button_text(
-    asset_server: &Res<'_, AssetServer>,
-    which: ToolbarButton,
-) -> TextBundle {
+pub(crate) fn toolbar_button_text(font: Handle<Font>, which: ToolbarButton) -> TextBundle {
     TextBundle {
         text: Text::from_section(
             which,
             TextStyle {
-                font:      asset_server.load("JuliaMono.ttf"),
+                font,
                 font_size: 20.0,
-                color:     Color::WHITE,
+                color: Color::WHITE,
             },
         ),
         ..default()

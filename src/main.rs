@@ -47,62 +47,62 @@ use bevy::{
     render::mesh::{shape::Icosphere, Mesh},
     transform::components::Transform,
 };
-#[cfg(feature = "render")]
-use bevy::{
-    asset::{AssetServer, Assets},
-    core_pipeline::core_2d::{Camera2d, Camera2dBundle},
-    ecs::{
-        change_detection::ResMut,
-        query::{Changed, With},
-        system::{Commands, Query, Res},
-    },
-    hierarchy::BuildChildren,
-    prelude::Vec2,
-    render::{
-        camera::{Camera, RenderTarget},
-        color::Color,
-        render_resource::{
-            Extent3d,
-            TextureDescriptor,
-            TextureDimension,
-            TextureFormat,
-            TextureUsages,
-        },
-        texture::{Image, ImageSettings},
-    },
-    sprite::{Sprite, SpriteBundle},
-    text::Text,
-    transform::components::GlobalTransform,
-    ui::{
-        entity::{NodeBundle, TextBundle},
-        AlignSelf,
-        FocusPolicy,
-        Interaction,
-        JustifyContent,
-        PositionType,
-        Size,
-        Style,
-        UiColor,
-        UiRect,
-        Val,
-    },
-    window::{CursorIcon, WindowDescriptor, Windows},
-    winit::WinitSettings,
-};
 #[cfg(all(feature = "debug", feature = "render"))]
 use bevy::{
     diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
     log::debug,
 };
 #[cfg(feature = "render")]
-use components::{
-    markers::{InfoPanel, ToolbarButton},
-    third_party::PanCam,
+use {
+    bevy::text::Font,
+    bevy::{
+        asset::Assets,
+        core_pipeline::core_2d::{Camera2d, Camera2dBundle},
+        ecs::{
+            change_detection::ResMut,
+            query::{Changed, With},
+            system::{Commands, Query, Res},
+        },
+        hierarchy::BuildChildren,
+        prelude::Vec2,
+        render::{
+            camera::{Camera, RenderTarget},
+            color::Color,
+            render_resource::{
+                Extent3d,
+                TextureDescriptor,
+                TextureDimension,
+                TextureFormat,
+                TextureUsages,
+            },
+            texture::{Image, ImageSettings},
+        },
+        sprite::{Sprite, SpriteBundle},
+        text::Text,
+        transform::components::GlobalTransform,
+        ui::{
+            entity::{NodeBundle, TextBundle},
+            AlignSelf,
+            FocusPolicy,
+            Interaction,
+            JustifyContent,
+            PositionType,
+            Size,
+            Style,
+            UiColor,
+            UiRect,
+            Val,
+        },
+        window::{CursorIcon, WindowDescriptor, Windows},
+        winit::WinitSettings,
+    },
+    components::{
+        markers::{InfoPanel, ToolbarButton},
+        third_party::PanCam,
+    },
+    resources::CursorMapPosition,
+    ui_helpers::{toolbar_button, toolbar_button_text},
 };
-#[cfg(feature = "render")]
-use resources::CursorMapPosition;
-#[cfg(feature = "render")]
-use ui_helpers::{toolbar_button, toolbar_button_text};
 use {
     bevy::{
         app::App,
@@ -337,12 +337,16 @@ fn update_info_panel(
 #[cfg(feature = "render")]
 fn generate_graphics(
     mut commands: Commands<'_, '_>,
+    mut world_manager: ResMut<'_, WorldManager>,
     mut images: ResMut<'_, Assets<Image>>,
+    mut fonts: ResMut<'_, Assets<Font>>,
     #[cfg(feature = "planet_view")] mut materials: ResMut<'_, Assets<StandardMaterial>>,
     #[cfg(feature = "planet_view")] mut meshes: ResMut<'_, Assets<Mesh>>,
-    mut world_manager: ResMut<'_, WorldManager>,
-    asset_server: Res<'_, AssetServer>,
 ) {
+    let julia_mono_handle = fonts.add(
+        Font::try_from_bytes(include_bytes!("../assets/JuliaMono.ttf").to_vec())
+            .expect("Failed to create JuliaMono font!"),
+    );
     let world = world_manager.world();
     let custom_sprite_size = Vec2 {
         x: (WORLD_SCALE * world.width as i32) as f32,
@@ -417,6 +421,7 @@ fn generate_graphics(
         },
         ..default()
     });
+
     _ = commands
         .spawn_bundle(NodeBundle {
             style: Style {
@@ -444,7 +449,7 @@ fn generate_graphics(
                             text: Text::from_section(
                                 "Info Panel",
                                 bevy::text::TextStyle {
-                                    font:      asset_server.load("JuliaMono.ttf"),
+                                    font:      julia_mono_handle.clone(),
                                     font_size: 15.0,
                                     color:     Color::WHITE,
                                 },
@@ -471,8 +476,10 @@ fn generate_graphics(
                         _ = button_box
                             .spawn_bundle(toolbar_button())
                             .with_children(|button| {
-                                _ = button
-                                    .spawn_bundle(toolbar_button_text(&asset_server, button_type));
+                                _ = button.spawn_bundle(toolbar_button_text(
+                                    julia_mono_handle.clone(),
+                                    button_type,
+                                ));
                             })
                             .insert(button_type)
                     });
