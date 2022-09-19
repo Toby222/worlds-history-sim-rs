@@ -48,64 +48,64 @@ jobs:
           name: worlds-rs-${{ matrix.os }}-none
           path: target/release/worlds-sim-rust*
 
-  create-release:
-    name: "Create release"
-    runs-on: ubuntu-22.04
-    needs: [compile]
-    steps:
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-windows-2022-full
-          path: ~/download/worlds-rs-windows-2022-full.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-windows-2022-debug
-          path: ~/download/worlds-rs-windows-2022-debug.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-windows-2022-render
-          path: ~/download/worlds-rs-windows-2022-render.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-windows-2022-none
-          path: ~/download/worlds-rs-windows-2022-none.zip
+  # create-release:
+  #   name: "Create release"
+  #   runs-on: ubuntu-22.04
+  #   if: ${{ startsWith(github.ref, 'refs/tags/') }}
+  #   needs: [compile]
+  #   steps:
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-windows-2022-full
+  #         path: ~/download/worlds-rs-windows-2022-full.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-windows-2022-debug
+  #         path: ~/download/worlds-rs-windows-2022-debug.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-windows-2022-render
+  #         path: ~/download/worlds-rs-windows-2022-render.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-windows-2022-none
+  #         path: ~/download/worlds-rs-windows-2022-none.zip
 
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-ubuntu-22.04-full
-          path: ~/download/worlds-rs-ubuntu-22.04-full.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-ubuntu-22.04-debug
-          path: ~/download/worlds-rs-ubuntu-22.04-debug.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-ubuntu-22.04-render
-          path: ~/download/worlds-rs-ubuntu-22.04-render.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-ubuntu-22.04-none
-          path: ~/download/worlds-rs-ubuntu-22.04-none.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-ubuntu-22.04-full
+  #         path: ~/download/worlds-rs-ubuntu-22.04-full.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-ubuntu-22.04-debug
+  #         path: ~/download/worlds-rs-ubuntu-22.04-debug.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-ubuntu-22.04-render
+  #         path: ~/download/worlds-rs-ubuntu-22.04-render.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-ubuntu-22.04-none
+  #         path: ~/download/worlds-rs-ubuntu-22.04-none.zip
 
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-macos-12-full
-          path: ~/download/worlds-rs-macos-12-full.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-macos-12-debug
-          path: ~/download/worlds-rs-macos-12-debug.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-macos-12-render
-          path: ~/download/worlds-rs-macos-12-render.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-macos-12-none
-          path: ~/download/worlds-rs-macos-12-none.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-macos-12-full
+  #         path: ~/download/worlds-rs-macos-12-full.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-macos-12-debug
+  #         path: ~/download/worlds-rs-macos-12-debug.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-macos-12-render
+  #         path: ~/download/worlds-rs-macos-12-render.zip
+  #     - uses: actions/download-artifact@v3
+  #       with:
+  #         name: worlds-rs-macos-12-none
+  #         path: ~/download/worlds-rs-macos-12-none.zip
 
-      - name: Upload binaries
-        uses: softprops/action-gh-release@v1
-        with:
-            files:
-              ~/download/*
+  #     - name: Upload binaries
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #           files: ~/download/*
