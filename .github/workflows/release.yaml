@@ -26,3 +26,16 @@ jobs:
       - name: Build binary
         run: |
           cargo build --release --no-default-features --features=${{ matrix.features }}
+
+      - name: Upload binary
+        if: ${{ matrix.os }}=="windows"
+        uses: actions/upload-artifact@v3
+        with:
+          name: worlds-rs.exe
+          path: target/release/worlds-sim-rust.exe
+      - name: Uplaod binary
+        if: ${{ matrix.os }}!="windows"
+        uses: actions/upload-artifact@v3
+        with:
+          name: world-rs
+          path: target/release/worlds-sim-rust
