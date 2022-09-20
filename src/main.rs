@@ -32,10 +32,11 @@
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
 
-mod components;
-mod plugins;
-mod resources;
-mod ui_helpers;
+pub(crate) mod components;
+pub(crate) mod macros;
+pub(crate) mod plugins;
+pub(crate) mod resources;
+pub(crate) mod ui_helpers;
 
 #[cfg(all(feature = "debug", feature = "render"))]
 use bevy::{
@@ -103,7 +104,7 @@ use {
     planet::WorldManager,
     plugins::WorldPlugins,
 };
-#[cfg(all(feature = "render", feature = "planet_view"))]
+#[cfg(all(feature = "render", feature = "globe_view"))]
 use {
     bevy::{
         asset::Handle,
@@ -121,7 +122,7 @@ use {
 #[cfg(feature = "render")]
 fn refresh_map_texture(
     images: &mut Assets<Image>,
-    #[cfg(feature = "planet_view")] materials: &mut Assets<StandardMaterial>,
+    #[cfg(feature = "globe_view")] materials: &mut Assets<StandardMaterial>,
     world_manager: &WorldManager,
 ) {
     let world = world_manager.world();
@@ -142,11 +143,11 @@ fn refresh_map_texture(
     });
     map_image.data = world_manager.map_color_bytes();
 
-    #[cfg(feature = "planet_view")]
+    #[cfg(feature = "globe_view")]
     {
         let planet_image_handle = images.get_handle(
             world_manager
-                .planet_image_handle_id
+                .globe_image_handle_id
                 .expect("No planet image handle"),
         );
         let planet_image = images
@@ -157,11 +158,11 @@ fn refresh_map_texture(
             height:                world.height,
             depth_or_array_layers: 1,
         });
-        planet_image.data = world_manager.planet_color_bytes();
+        planet_image.data = world_manager.globe_color_bytes();
 
         let planet_material_handle = materials.get_handle(
             world_manager
-                .planet_material_handle_id
+                .globe_material_handle_id
                 .expect("No planet material handle"),
         );
         let planet_material = materials
@@ -188,19 +189,19 @@ fn handle_toolbar_button(
     mut windows: ResMut<'_, Windows>,
     mut images: ResMut<'_, Assets<Image>>,
     mut world_manager: ResMut<'_, WorldManager>,
-    #[cfg(feature = "planet_view")] mut camera_3d_query: Query<
+    #[cfg(feature = "globe_view")] mut camera_3d_query: Query<
         '_,
         '_,
         &mut Camera,
         (With<Camera3d>, Without<Camera2d>),
     >,
-    #[cfg(feature = "planet_view")] mut camera_2d_query: Query<
+    #[cfg(feature = "globe_view")] mut camera_2d_query: Query<
         '_,
         '_,
-        &mut Camera,
+        (&mut Camera, &mut PanCam),
         (With<Camera2d>, Without<Camera3d>),
     >,
-    #[cfg(feature = "planet_view")] mut materials: ResMut<'_, Assets<StandardMaterial>>,
+    #[cfg(feature = "globe_view")] mut materials: ResMut<'_, Assets<StandardMaterial>>,
 ) {
     for (interaction, mut color, toolbar_button) in &mut interaction_query {
         match *interaction {
@@ -214,7 +215,7 @@ fn handle_toolbar_button(
                         world_manager.toggle_rainfall();
                         refresh_map_texture(
                             &mut images,
-                            #[cfg(feature = "planet_view")]
+                            #[cfg(feature = "globe_view")]
                             &mut materials,
                             &world_manager,
                         );
@@ -225,18 +226,18 @@ fn handle_toolbar_button(
                         world_manager.toggle_temperature();
                         refresh_map_texture(
                             &mut images,
-                            #[cfg(feature = "planet_view")]
+                            #[cfg(feature = "globe_view")]
                             &mut materials,
                             &world_manager,
                         );
                     },
-                    ToolbarButton::Biomes => {
+                    ToolbarButton::PlanetView => {
                         #[cfg(feature = "debug")]
-                        debug!("Toggling biomes");
-                        world_manager.toggle_biomes();
+                        debug!("Cycling planet view");
+                        world_manager.cycle_view();
                         refresh_map_texture(
                             &mut images,
-                            #[cfg(feature = "planet_view")]
+                            #[cfg(feature = "globe_view")]
                             &mut materials,
                             &world_manager,
                         );
@@ -247,7 +248,7 @@ fn handle_toolbar_button(
                         world_manager.toggle_contours();
                         refresh_map_texture(
                             &mut images,
-                            #[cfg(feature = "planet_view")]
+                            #[cfg(feature = "globe_view")]
                             &mut materials,
                             &world_manager,
                         );
@@ -260,7 +261,7 @@ fn handle_toolbar_button(
                             .expect("Failed to generate new world");
                         refresh_map_texture(
                             &mut images,
-                            #[cfg(feature = "planet_view")]
+                            #[cfg(feature = "globe_view")]
                             &mut materials,
                             &world_manager,
                         );
@@ -276,19 +277,20 @@ fn handle_toolbar_button(
                         _ = world_manager.load_world("planet.ron", &mut images);
                         refresh_map_texture(
                             &mut images,
-                            #[cfg(feature = "planet_view")]
+                            #[cfg(feature = "globe_view")]
                             &mut materials,
                             &world_manager,
                         );
                     },
-                    #[cfg(feature = "planet_view")]
-                    ToolbarButton::PlanetView => {
+                    #[cfg(feature = "globe_view")]
+                    ToolbarButton::GlobeView => {
                         #[cfg(feature = "debug")]
-                        debug!("Toggling planet view");
+                        debug!("Toggling globe view");
                         let mut camera_3d = camera_3d_query.single_mut();
                         camera_3d.is_active = !camera_3d.is_active;
-                        let mut camera_2d = camera_2d_query.single_mut();
+                        let (mut camera_2d, mut pancam) = camera_2d_query.single_mut();
                         camera_2d.is_active = !camera_2d.is_active;
+                        pancam.enabled = camera_2d.is_active;
                     },
                 }
             },
@@ -336,11 +338,11 @@ fn update_cursor_map_position(
     }
 }
 
-#[cfg(all(feature = "render", feature = "planet_view"))]
+#[cfg(all(feature = "render", feature = "globe_view"))]
 const ROTATION_SPEED: f32 = 0.002;
-#[cfg(all(feature = "render", feature = "planet_view"))]
-fn rotate_planet(mut planet_transform: Query<'_, '_, &mut Transform, With<Handle<Mesh>>>) {
-    planet_transform.single_mut().rotate_y(ROTATION_SPEED);
+#[cfg(all(feature = "render", feature = "globe_view"))]
+fn rotate_globe(mut globe_transform: Query<'_, '_, &mut Transform, With<Handle<Mesh>>>) {
+    globe_transform.single_mut().rotate_y(ROTATION_SPEED);
 }
 
 #[cfg(feature = "render")]
@@ -431,8 +433,8 @@ fn generate_graphics(
     mut world_manager: ResMut<'_, WorldManager>,
     mut images: ResMut<'_, Assets<Image>>,
     mut fonts: ResMut<'_, Assets<Font>>,
-    #[cfg(feature = "planet_view")] mut materials: ResMut<'_, Assets<StandardMaterial>>,
-    #[cfg(feature = "planet_view")] mut meshes: ResMut<'_, Assets<Mesh>>,
+    #[cfg(feature = "globe_view")] mut materials: ResMut<'_, Assets<StandardMaterial>>,
+    #[cfg(feature = "globe_view")] mut meshes: ResMut<'_, Assets<Mesh>>,
 ) {
     let julia_mono_handle = fonts.add(
         Font::try_from_bytes(include_bytes!("../assets/JuliaMono.ttf").to_vec())
@@ -463,11 +465,11 @@ fn generate_graphics(
     });
     world_manager.map_image_handle_id = Some(map_image_handle.id);
 
-    #[cfg(feature = "planet_view")]
+    #[cfg(feature = "globe_view")]
     {
         let world = world_manager.world();
-        let planet_image_handle = images.add(Image {
-            data: world_manager.planet_color_bytes(),
+        let globe_image_handle = images.add(Image {
+            data: world_manager.globe_color_bytes(),
             texture_descriptor: TextureDescriptor {
                 label:           None,
                 size:            Extent3d {
@@ -483,7 +485,7 @@ fn generate_graphics(
             },
             ..default()
         });
-        world_manager.planet_image_handle_id = Some(planet_image_handle.id);
+        world_manager.globe_image_handle_id = Some(globe_image_handle.id);
 
         _ = commands.spawn_bundle(Camera3dBundle {
             camera: Camera {
@@ -499,19 +501,20 @@ fn generate_graphics(
             ..default()
         });
 
-        let planet_material_handle = materials.add(
+        let globe_material_handle = materials.add(
             images
-                .get_handle(world_manager.planet_image_handle_id.unwrap())
+                .get_handle(world_manager.globe_image_handle_id.unwrap())
                 .into(),
         );
-        world_manager.planet_material_handle_id = Some(planet_material_handle.id);
+        world_manager.globe_material_handle_id = Some(globe_material_handle.id);
 
+        // TODO: Globe texture is mirrored east-to-west.
         _ = commands.spawn_bundle(PbrBundle {
             mesh: meshes.add(Mesh::from(UVSphere {
                 radius: 2.0,
                 ..default()
             })),
-            material: planet_material_handle,
+            material: globe_material_handle,
             transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
             ..default()
         });
@@ -591,7 +594,7 @@ fn generate_graphics(
                     ..default()
                 })
                 .with_children(|button_box| {
-                    ToolbarButton::BUTTONS.iter().for_each(|&button_type| {
+                    ToolbarButton::iterator().for_each(|&button_type| {
                         _ = button_box
                             .spawn_bundle(toolbar_button())
                             .with_children(|button| {
@@ -630,9 +633,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .add_system(handle_toolbar_button)
             .add_system(update_cursor_map_position)
             .add_system(update_info_panel);
-        #[cfg(all(feature = "render", feature = "planet_view"))]
+        #[cfg(all(feature = "render", feature = "globe_view"))]
         {
-            _ = app.add_system(rotate_planet);
+            _ = app.add_system(rotate_globe);
         }
     }
     #[cfg(not(feature = "render"))]

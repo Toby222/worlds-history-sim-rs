@@ -1,9 +1,6 @@
+use crate::{macros::iterable_enum, World};
 #[cfg(feature = "render")]
 use bevy::render::color::Color;
-use {
-    crate::World,
-    serde::{Deserialize, Serialize},
-};
 
 #[derive(Debug, Clone, Default)]
 pub struct BiomeStats {
@@ -18,20 +15,16 @@ pub struct BiomeStats {
     pub max_temperature: f32,
 }
 
-macro_rules! biome_enum {
-    ($($Variant:ident),*$(,)?) =>
-    {
-        #[derive(Debug, Copy, Clone, Deserialize, Serialize)]
-        pub enum BiomeType {
-            $($Variant),*,
-        }
-        impl BiomeType {
-            pub const BIOMES: &'static [BiomeType] = &[$(BiomeType::$Variant),*];
-        }
-    }
-}
-
-biome_enum!(IceCap, Ocean, Grassland, Forest, Taiga, Tundra, Desert, Rainforest);
+iterable_enum!(BiomeType {
+    IceCap,
+    Ocean,
+    Grassland,
+    Forest,
+    Taiga,
+    Tundra,
+    Desert,
+    Rainforest
+});
 
 impl From<BiomeType> for BiomeStats {
     fn from(biome_type: BiomeType) -> BiomeStats {

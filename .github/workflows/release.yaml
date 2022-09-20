@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-2022, ubuntu-22.04, macos-12]
-        features: ["debug,render", "render", "debug,planet_view", "planet_view", "debug", ""]
+        features: ["debug,render", "render", "debug,globe_view", "globe_view", "debug", ""]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -34,11 +34,11 @@ jobs:
           name: worlds-rs-${{ matrix.os }}-debug-render
           path: target/release/worlds-sim-rust*
 
-      - name: Upload debug & planet_view binary
+      - name: Upload debug & globe_view binary
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.features == 'debug,planet_view' }}
+        if: ${{ matrix.features == 'debug,globe_view' }}
         with:
-          name: worlds-rs-${{ matrix.os }}-debug-planet_view
+          name: worlds-rs-${{ matrix.os }}-debug-globe_view
           path: target/release/worlds-sim-rust*
 
       - name: Upload non-debug binary

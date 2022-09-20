@@ -5,9 +5,9 @@ edition = "2021"
 
 [features]
 debug = []
-planet_view = ["render"]
+globe_view = ["render"]
 render = ["bevy/render"]
-default = ["render", "debug", "planet_view"]
+default = ["render", "debug", "globe_view"]
 
 [dependencies.rand]
 version = "0.8.5"

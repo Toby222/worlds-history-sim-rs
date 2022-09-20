@@ -1,41 +1,27 @@
 #[cfg(feature = "render")]
-use bevy::ecs::component::Component;
+use {crate::macros::iterable_enum, bevy::ecs::component::Component};
 
-#[cfg(feature = "render")]
-macro_rules! toolbar_enum {
-    ($($Variant:ident),*$(,)?) =>
-    {
-        #[derive(Debug, Component, Copy, Clone)]
-        pub enum ToolbarButton {
-            $($Variant),*,
-        }
-        impl ToolbarButton {
-            pub const BUTTONS: &'static [ToolbarButton] = &[$(ToolbarButton::$Variant),*];
-        }
-    }
-}
-
-#[cfg(all(feature = "render", not(feature = "planet_view")))]
-toolbar_enum!(
+#[cfg(all(feature = "render", not(feature = "globe_view")))]
+iterable_enum!(ToolbarButton {
     GenerateWorld,
     SaveWorld,
     LoadWorld,
     Rainfall,
     Temperature,
-    Biomes,
-    Contours,
-);
-#[cfg(all(feature = "render", feature = "planet_view"))]
-toolbar_enum!(
-    GenerateWorld,
-    SaveWorld,
-    LoadWorld,
-    Rainfall,
-    Temperature,
-    Biomes,
-    Contours,
     PlanetView,
-);
+    Contours,
+});
+#[cfg(all(feature = "render", feature = "globe_view"))]
+iterable_enum!(ToolbarButton {
+    GenerateWorld,
+    SaveWorld,
+    LoadWorld,
+    Rainfall,
+    Temperature,
+    PlanetView,
+    Contours,
+    GlobeView,
+});
 
 #[cfg(feature = "render")]
 impl From<ToolbarButton> for &'static str {
@@ -44,12 +30,12 @@ impl From<ToolbarButton> for &'static str {
             ToolbarButton::Rainfall => "Toggle rainfall",
             ToolbarButton::Temperature => "Toggle temperature",
             ToolbarButton::Contours => "Toggle contours",
-            ToolbarButton::Biomes => "Toggle biomes",
+            ToolbarButton::PlanetView => "Cycle view",
             ToolbarButton::GenerateWorld => "Generate new world",
             ToolbarButton::SaveWorld => "Save",
             ToolbarButton::LoadWorld => "Load",
-            #[cfg(feature = "planet_view")]
-            ToolbarButton::PlanetView => "Toggle planet view",
+            #[cfg(feature = "globe_view")]
+            ToolbarButton::GlobeView => "Toggle globe",
         }
     }
 }

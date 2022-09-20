@@ -48,7 +48,7 @@ impl PluginGroup for WorldPlugins {
                 .add(TextPlugin::default())
                 .add(UiPlugin::default())
                 .add(PanCamPlugin::default());
-            #[cfg(feature = "planet_view")]
+            #[cfg(feature = "globe_view")]
             {
                 use bevy::pbr::PbrPlugin;
                 _ = group.add(PbrPlugin::default())

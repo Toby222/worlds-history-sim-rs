@@ -1,16 +1,23 @@
 // TODO: Logging doesn't seem to work here? Figure out why and fix
 use {
     crate::{
-        cartesian_coordinates,
-        mix_values,
+        math_util::{
+            cartesian_coordinates,
+            mix_values,
+            random_point_in_sphere,
+            CartesianError,
+            RepeatNum,
+        },
         perlin,
-        random_point_in_sphere,
         BiomeStats,
         BiomeType,
-        CartesianError,
-        RepeatNum,
     },
-    bevy::{log::info, math::Vec3A, prelude::Vec2, utils::default},
+    bevy::{
+        log::info,
+        math::Vec3A,
+        prelude::Vec2,
+        utils::{default, HashMap},
+    },
     rand::{rngs::StdRng, Rng, SeedableRng},
     serde::{Deserialize, Serialize},
     std::{
@@ -45,6 +52,18 @@ impl Display for WorldGenError {
             WorldGenError::CartesianError(err) => Display::fmt(err, f),
         }
     }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum CompassDirection {
+    North,
+    NorthEast,
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
 }
 
 #[derive(Debug, Serialize)]
@@ -456,7 +475,7 @@ impl World {
                 let mut total_presence = 0.0;
 
                 let mut biome_presences = vec![];
-                for biome_type in BiomeType::BIOMES {
+                for biome_type in BiomeType::iterator() {
                     let presence = self.biome_presence(cell, &biome_type.into());
 
                     if presence <= 0.0 {
@@ -525,5 +544,93 @@ impl World {
         };
 
         presence
+    }
+
+    #[must_use]
+    pub fn cell_neighbors(&self, x: usize, y: usize) -> HashMap<CompassDirection, (usize, usize)> {
+        let mut neighbors = HashMap::new();
+
+        let height = self.height as usize;
+        let width = self.width as usize;
+
+        let north_edge = y >= height - 1;
+        let east_edge = x >= width - 1;
+        let south_edge = y == 0;
+        let west_edge = x == 0;
+
+        if !north_edge {
+            _ = neighbors.insert_unique_unchecked(CompassDirection::North, (y + 1, x));
+        }
+        if !north_edge && !east_edge {
+            _ = neighbors.insert_unique_unchecked(CompassDirection::NorthEast, (y + 1, x + 1));
+        }
+        if !east_edge {
+            _ = neighbors.insert_unique_unchecked(CompassDirection::East, (y, x + 1));
+        }
+        if !south_edge && !east_edge {
+            _ = neighbors.insert_unique_unchecked(CompassDirection::SouthEast, (y - 1, x + 1));
+        }
+        if !south_edge {
+            _ = neighbors.insert_unique_unchecked(CompassDirection::South, (y - 1, x));
+        }
+        if !south_edge && !west_edge {
+            _ = neighbors.insert_unique_unchecked(CompassDirection::SouthWest, (y - 1, x - 1));
+        }
+        if !west_edge {
+            _ = neighbors.insert_unique_unchecked(CompassDirection::West, (y, x - 1));
+        };
+        if !north_edge && !west_edge {
+            _ = neighbors.insert_unique_unchecked(CompassDirection::NorthWest, (y + 1, x - 1));
+        };
+
+        neighbors
+    }
+
+    #[must_use]
+    pub fn get_slant(&self, x: usize, y: usize) -> f32 {
+        let neighbors = self.cell_neighbors(x, y);
+        let terrain = &self.terrain;
+
+        let mut west_altitude = f32::MIN;
+        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::North) {
+            west_altitude = f32::max(
+                west_altitude,
+                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
+            );
+        }
+        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::NorthWest) {
+            west_altitude = f32::max(
+                west_altitude,
+                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
+            );
+        }
+        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::West) {
+            west_altitude = f32::max(
+                west_altitude,
+                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
+            );
+        }
+
+        let mut east_altitude = f32::MIN;
+        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::North) {
+            east_altitude = f32::max(
+                east_altitude,
+                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
+            );
+        }
+        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::NorthWest) {
+            east_altitude = f32::max(
+                east_altitude,
+                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
+            );
+        }
+        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::West) {
+            east_altitude = f32::max(
+                east_altitude,
+                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
+            );
+        }
+
+        west_altitude - east_altitude
     }
 }

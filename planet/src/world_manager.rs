@@ -2,19 +2,10 @@
 use bevy::log::debug;
 #[cfg(feature = "debug")]
 use bevy::utils::default;
-#[cfg(all(feature = "render", feature = "planet_view"))]
+#[cfg(all(feature = "render", feature = "globe_view"))]
 use std::f32::consts::PI;
-#[cfg(feature = "render")]
 use {
-    crate::{BiomeStats, TerrainCell},
-    bevy::{
-        asset::{Assets, HandleId},
-        render::render_resource::Extent3d,
-        render::{color::Color, texture::Image},
-    },
-};
-use {
-    crate::{World, WorldGenError},
+    crate::{macros::iterable_enum, World, WorldGenError},
     bevy::log::warn,
     rand::random,
     std::{
@@ -23,6 +14,15 @@ use {
         fs::File,
         io::{self, Read, Write},
         path::Path,
+    },
+};
+#[cfg(feature = "render")]
+use {
+    crate::{BiomeStats, TerrainCell},
+    bevy::{
+        asset::{Assets, HandleId},
+        render::render_resource::Extent3d,
+        render::{color::Color, texture::Image},
     },
 };
 
@@ -89,43 +89,46 @@ impl Display for SaveError {
     }
 }
 
+iterable_enum!(PlanetView { Biomes, Altitude });
+
 #[derive(Debug)]
 pub struct WorldManager {
     world: Option<World>,
 
     #[cfg(feature = "render")]
-    pub map_image_handle_id:       Option<HandleId>,
-    #[cfg(all(feature = "render", feature = "planet_view"))]
-    pub planet_image_handle_id:    Option<HandleId>,
-    #[cfg(all(feature = "render", feature = "planet_view"))]
-    pub planet_material_handle_id: Option<HandleId>,
+    pub map_image_handle_id:      Option<HandleId>,
+    #[cfg(all(feature = "render", feature = "globe_view"))]
+    pub globe_image_handle_id:    Option<HandleId>,
+    #[cfg(all(feature = "render", feature = "globe_view"))]
+    pub globe_material_handle_id: Option<HandleId>,
 
     #[cfg(feature = "render")]
     rainfall_visible:    bool,
     #[cfg(feature = "render")]
     temperature_visible: bool,
     #[cfg(feature = "render")]
-    biomes_visible:      bool,
-    #[cfg(feature = "render")]
     contours:            bool,
+    #[cfg(feature = "render")]
+    view:                PlanetView,
 }
 
 impl WorldManager {
+    #[must_use]
     pub fn new() -> WorldManager {
         Self {
             world: None,
             #[cfg(feature = "render")]
             map_image_handle_id: None,
-            #[cfg(all(feature = "render", feature = "planet_view"))]
-            planet_image_handle_id: None,
-            #[cfg(all(feature = "render", feature = "planet_view"))]
-            planet_material_handle_id: None,
+            #[cfg(all(feature = "render", feature = "globe_view"))]
+            globe_image_handle_id: None,
+            #[cfg(all(feature = "render", feature = "globe_view"))]
+            globe_material_handle_id: None,
             #[cfg(feature = "render")]
             rainfall_visible: false,
             #[cfg(feature = "render")]
             temperature_visible: false,
             #[cfg(feature = "render")]
-            biomes_visible: true,
+            view: PlanetView::Biomes,
             #[cfg(feature = "render")]
             contours: false,
         }
@@ -228,14 +231,19 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
-    pub fn toggle_biomes(&mut self) {
+    pub fn cycle_view(&mut self) {
+        let idx = (PlanetView::iterator()
+            .position(|view| *view == self.view)
+            .unwrap()
+            + 1)
+            % PlanetView::ITEM_COUNT;
         #[cfg(feature = "debug")]
-        if self.temperature_visible {
-            debug!("Turning biomes off");
-        } else {
-            debug!("Turning biomes on");
-        }
-        self.biomes_visible = !self.biomes_visible;
+        debug!(
+            "Cycling view from {:#?} to {:#?}",
+            self.view,
+            PlanetView::ITEMS[idx]
+        );
+        self.view = PlanetView::ITEMS[idx];
     }
 
     #[cfg(feature = "render")]
@@ -249,6 +257,7 @@ impl WorldManager {
         self.contours = !self.contours;
     }
 
+    #[must_use]
     pub fn get_world(&self) -> Option<&World> {
         self.world.as_ref()
     }
@@ -267,8 +276,9 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
+    #[must_use]
     fn generate_color(&self, cell: &TerrainCell) -> Color {
-        if self.biomes_visible {
+        if self.view == PlanetView::Biomes {
             return WorldManager::biome_color(cell);
         }
 
@@ -316,6 +326,7 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
+    #[must_use]
     fn altitude_color(altitude: f32) -> Color {
         if altitude < 0.0 {
             Color::rgb(0.0, 0.0, (2.0 - altitude / World::MIN_ALTITUDE) / 2.0)
@@ -327,6 +338,7 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
+    #[must_use]
     fn altitude_contour_color(altitude: f32) -> Color {
         if altitude < 0.0 {
             Color::rgb(0.0, 0.0, (2.0 - altitude / World::MIN_ALTITUDE) / 2.0)
@@ -342,6 +354,7 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
+    #[must_use]
     fn rainfall_contour_color(&self, rainfall: f32) -> Color {
         let mut shade_value = 1.0;
         let value = rainfall / self.world().max_rainfall;
@@ -354,6 +367,7 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
+    #[must_use]
     fn temperature_contour_color(&self, temperature: f32) -> Color {
         let mut shade_value = 1.0;
         let value = (temperature - self.world().min_temperature)
@@ -367,6 +381,7 @@ impl WorldManager {
     }
 
     #[cfg(feature = "render")]
+    #[must_use]
     fn biome_color(cell: &TerrainCell) -> Color {
         cell.biome_presences
             .iter()
@@ -412,9 +427,9 @@ impl WorldManager {
             .collect()
     }
 
-    #[cfg(all(feature = "render", feature = "planet_view"))]
+    #[cfg(all(feature = "render", feature = "globe_view"))]
     #[must_use]
-    fn planet_colors(&self) -> Vec<Color> {
+    fn globe_colors(&self) -> Vec<Color> {
         let world = self.world();
         let width = world.width as usize;
         let height = world.height as usize;
@@ -439,10 +454,10 @@ impl WorldManager {
         colors
     }
 
-    #[cfg(all(feature = "render", feature = "planet_view"))]
+    #[cfg(all(feature = "render", feature = "globe_view"))]
     #[must_use]
-    pub fn planet_color_bytes(&self) -> Vec<u8> {
-        self.planet_colors()
+    pub fn globe_color_bytes(&self) -> Vec<u8> {
+        self.globe_colors()
             .iter()
             .flat_map(|color| {
                 color
