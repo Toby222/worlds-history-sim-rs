@@ -153,10 +153,14 @@ jobs:
           name: worlds-rs-macos-12-minimal
           path: ~/download/worlds-rs-macos-12-minimal.zip
 
+      - name: List artifacts
+        run: |
+          ls -la --color=auto /home/runner/download/
+
       - name: Upload binaries
         uses: softprops/action-gh-release@v1
         with:
-            files: ~/download/*
+            files: /home/runner/download/*
             prerelease: true
             tag_name: "pre-release"
             generate_release_notes: true
