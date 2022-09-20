@@ -5,7 +5,7 @@ use {
         mix_values,
         perlin,
         random_point_in_sphere,
-        Biome,
+        BiomeStats,
         BiomeType,
         CartesianError,
         RepeatNum,
@@ -55,7 +55,7 @@ pub struct World {
 
     pub terrain:           Vec<Vec<TerrainCell>>,
     pub continent_offsets: [Vec2; World::NUM_CONTINENTS as usize],
-    pub continent_widths:  [f32; World::NUM_CONTINENTS as usize],
+    pub continent_sizes:   [Vec2; World::NUM_CONTINENTS as usize],
     #[serde(skip)]
     pub max_altitude:      f32,
     #[serde(skip)]
@@ -90,7 +90,7 @@ impl World {
     pub(crate) const MAX_TEMPERATURE: f32 = 30.0;
     pub(crate) const MIN_ALTITUDE: f32 = -15000.0;
     pub(crate) const MIN_RAINFALL: f32 = 0.0;
-    pub(crate) const MIN_TEMPERATURE: f32 = -60.0;
+    pub(crate) const MIN_TEMPERATURE: f32 = -35.0;
     const MOUNTAIN_RANGE_MIX_FACTOR: f32 = 0.075;
     const MOUNTAIN_RANGE_WIDTH_FACTOR: f32 = 25.0;
     const NUM_CONTINENTS: u8 = 7;
@@ -114,7 +114,7 @@ impl World {
                 height.try_into().unwrap()
             ],
             continent_offsets: [default(); World::NUM_CONTINENTS as usize],
-            continent_widths: [default(); World::NUM_CONTINENTS as usize],
+            continent_sizes: [default(); World::NUM_CONTINENTS as usize],
             max_altitude: World::MIN_ALTITUDE,
             min_altitude: World::MAX_ALTITUDE,
             max_rainfall: World::MIN_RAINFALL,
@@ -156,9 +156,14 @@ impl World {
             self.continent_offsets[i as usize].y =
                 self.rng.gen_range(height * 1.0 / 6.0..height * 5.0 / 6.0);
 
-            self.continent_widths[i as usize] = self
-                .rng
-                .gen_range(World::CONTINENT_MIN_WIDTH_FACTOR..World::CONTINENT_MAX_WIDTH_FACTOR);
+            self.continent_sizes[i as usize] = Vec2 {
+                x: self.rng.gen_range(
+                    World::CONTINENT_MIN_WIDTH_FACTOR..World::CONTINENT_MAX_WIDTH_FACTOR,
+                ),
+                y: self.rng.gen_range(
+                    World::CONTINENT_MIN_WIDTH_FACTOR..World::CONTINENT_MAX_WIDTH_FACTOR,
+                ),
+            };
         }
         info!("Done generating continents");
     }
@@ -175,20 +180,25 @@ impl World {
         for i in 0..World::NUM_CONTINENTS {
             let idx = i as usize;
             let Vec2 {
-                x: continent_x,
-                y: continent_y,
+                x: offset_x,
+                y: offset_y,
             } = self.continent_offsets[idx];
+            let Vec2 {
+                x: continent_width,
+                y: continent_height,
+            } = self.continent_sizes[idx];
 
             let distance_x = f32::min(
-                f32::min(f32::abs(continent_x - x), f32::abs(width + continent_x - x)),
-                f32::abs(continent_x - x - width),
-            ) * beta_factor;
+                f32::min(f32::abs(offset_x - x), f32::abs(width + offset_x - x)),
+                f32::abs(offset_x - x - width),
+            ) * beta_factor
+                * continent_width;
 
-            let distance_y = f32::abs(continent_y - y);
+            let distance_y = f32::abs(offset_y - y) * continent_height;
 
             let distance = f32::sqrt((distance_x * distance_x) + (distance_y * distance_y));
 
-            let value = f32::max(0.0, 1.0 - self.continent_widths[idx] * distance / width);
+            let value = f32::max(0.0, 1.0 - distance / width);
 
             if value > max_value {
                 max_value = value;
@@ -464,7 +474,7 @@ impl World {
         }
     }
 
-    fn biome_presence(&self, cell: &TerrainCell, biome: &Biome) -> f32 {
+    fn biome_presence(&self, cell: &TerrainCell, biome: &BiomeStats) -> f32 {
         let mut presence = 0.0;
         let altitude_diff = cell.altitude - biome.min_altitude;
         if altitude_diff < 0.0 {

@@ -37,16 +37,6 @@ mod plugins;
 mod resources;
 mod ui_helpers;
 
-#[cfg(all(feature = "render", feature = "planet_view"))]
-use bevy::{
-    asset::Handle,
-    core_pipeline::core_3d::Camera3dBundle,
-    pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
-    prelude::Vec3,
-    render::camera::OrthographicProjection,
-    render::mesh::{shape::Icosphere, Mesh},
-    transform::components::Transform,
-};
 #[cfg(all(feature = "debug", feature = "render"))]
 use bevy::{
     diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
@@ -100,7 +90,7 @@ use {
         markers::{InfoPanel, ToolbarButton},
         third_party::PanCam,
     },
-    planet::Biome,
+    planet::BiomeStats,
     resources::CursorMapPosition,
     ui_helpers::{toolbar_button, toolbar_button_text},
 };
@@ -113,24 +103,72 @@ use {
     planet::WorldManager,
     plugins::WorldPlugins,
 };
+#[cfg(all(feature = "render", feature = "planet_view"))]
+use {
+    bevy::{
+        asset::Handle,
+        core_pipeline::core_3d::{Camera3d, Camera3dBundle},
+        ecs::query::Without,
+        pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
+        prelude::{Quat, Vec3},
+        render::camera::OrthographicProjection,
+        render::mesh::{shape::UVSphere, Mesh},
+        transform::components::Transform,
+    },
+    std::f32::consts::FRAC_PI_2,
+};
 
 #[cfg(feature = "render")]
-fn refresh_world_texture(images: &mut Assets<Image>, world_manager: &WorldManager) {
+fn refresh_map_texture(
+    images: &mut Assets<Image>,
+    #[cfg(feature = "planet_view")] materials: &mut Assets<StandardMaterial>,
+    world_manager: &WorldManager,
+) {
+    let world = world_manager.world();
     #[cfg(feature = "debug")]
     debug!("refreshing world texture");
-    let image_handle = images.get_handle(world_manager.image_handle_id.expect("No image handle"));
-    let world_image = images
-        .get_mut(&image_handle)
-        .expect("Image handle pointing to non-existing texture");
-    world_image.resize(Extent3d {
-        width:                 world_manager.world().width,
-        height:                world_manager.world().height,
+    let map_image_handle = images.get_handle(
+        world_manager
+            .map_image_handle_id
+            .expect("No map image handle"),
+    );
+    let map_image = images
+        .get_mut(&map_image_handle)
+        .expect("Map image handle pointing to non-existing image");
+    map_image.resize(Extent3d {
+        width:                 world.width,
+        height:                world.height,
         depth_or_array_layers: 1,
     });
-    world_image.data = world_manager.world_color_bytes();
+    map_image.data = world_manager.map_color_bytes();
 
-    // TODO: Update Icosphere material. Try to find out why it doesn't
-    // automatically
+    #[cfg(feature = "planet_view")]
+    {
+        let planet_image_handle = images.get_handle(
+            world_manager
+                .planet_image_handle_id
+                .expect("No planet image handle"),
+        );
+        let planet_image = images
+            .get_mut(&planet_image_handle)
+            .expect("Planet image handle pointing to non-existing image");
+        planet_image.resize(Extent3d {
+            width:                 world.width,
+            height:                world.height,
+            depth_or_array_layers: 1,
+        });
+        planet_image.data = world_manager.planet_color_bytes();
+
+        let planet_material_handle = materials.get_handle(
+            world_manager
+                .planet_material_handle_id
+                .expect("No planet material handle"),
+        );
+        let planet_material = materials
+            .get_mut(&planet_material_handle)
+            .expect("Planet material handle pointing to non-existing material");
+        planet_material.base_color_texture = Some(planet_image_handle);
+    }
 }
 
 #[cfg(feature = "render")]
@@ -150,6 +188,19 @@ fn handle_toolbar_button(
     mut windows: ResMut<'_, Windows>,
     mut images: ResMut<'_, Assets<Image>>,
     mut world_manager: ResMut<'_, WorldManager>,
+    #[cfg(feature = "planet_view")] mut camera_3d_query: Query<
+        '_,
+        '_,
+        &mut Camera,
+        (With<Camera3d>, Without<Camera2d>),
+    >,
+    #[cfg(feature = "planet_view")] mut camera_2d_query: Query<
+        '_,
+        '_,
+        &mut Camera,
+        (With<Camera2d>, Without<Camera3d>),
+    >,
+    #[cfg(feature = "planet_view")] mut materials: ResMut<'_, Assets<StandardMaterial>>,
 ) {
     for (interaction, mut color, toolbar_button) in &mut interaction_query {
         match *interaction {
@@ -161,25 +212,45 @@ fn handle_toolbar_button(
                         #[cfg(feature = "debug")]
                         debug!("Toggling rainfall");
                         world_manager.toggle_rainfall();
-                        refresh_world_texture(&mut images, &world_manager);
+                        refresh_map_texture(
+                            &mut images,
+                            #[cfg(feature = "planet_view")]
+                            &mut materials,
+                            &world_manager,
+                        );
                     },
                     ToolbarButton::Temperature => {
                         #[cfg(feature = "debug")]
                         debug!("Toggling temperature");
                         world_manager.toggle_temperature();
-                        refresh_world_texture(&mut images, &world_manager);
+                        refresh_map_texture(
+                            &mut images,
+                            #[cfg(feature = "planet_view")]
+                            &mut materials,
+                            &world_manager,
+                        );
                     },
                     ToolbarButton::Biomes => {
                         #[cfg(feature = "debug")]
                         debug!("Toggling biomes");
                         world_manager.toggle_biomes();
-                        refresh_world_texture(&mut images, &world_manager);
+                        refresh_map_texture(
+                            &mut images,
+                            #[cfg(feature = "planet_view")]
+                            &mut materials,
+                            &world_manager,
+                        );
                     },
                     ToolbarButton::Contours => {
                         #[cfg(feature = "debug")]
                         debug!("Toggling contours");
                         world_manager.toggle_contours();
-                        refresh_world_texture(&mut images, &world_manager);
+                        refresh_map_texture(
+                            &mut images,
+                            #[cfg(feature = "planet_view")]
+                            &mut materials,
+                            &world_manager,
+                        );
                     },
                     ToolbarButton::GenerateWorld => {
                         #[cfg(feature = "debug")]
@@ -187,7 +258,12 @@ fn handle_toolbar_button(
                         _ = world_manager
                             .new_world()
                             .expect("Failed to generate new world");
-                        refresh_world_texture(&mut images, &world_manager);
+                        refresh_map_texture(
+                            &mut images,
+                            #[cfg(feature = "planet_view")]
+                            &mut materials,
+                            &world_manager,
+                        );
                     },
                     ToolbarButton::SaveWorld => {
                         #[cfg(feature = "debug")]
@@ -198,7 +274,21 @@ fn handle_toolbar_button(
                         #[cfg(feature = "debug")]
                         debug!("Loading world");
                         _ = world_manager.load_world("planet.ron", &mut images);
-                        refresh_world_texture(&mut images, &world_manager);
+                        refresh_map_texture(
+                            &mut images,
+                            #[cfg(feature = "planet_view")]
+                            &mut materials,
+                            &world_manager,
+                        );
+                    },
+                    #[cfg(feature = "planet_view")]
+                    ToolbarButton::PlanetView => {
+                        #[cfg(feature = "debug")]
+                        debug!("Toggling planet view");
+                        let mut camera_3d = camera_3d_query.single_mut();
+                        camera_3d.is_active = !camera_3d.is_active;
+                        let mut camera_2d = camera_2d_query.single_mut();
+                        camera_2d.is_active = !camera_2d.is_active;
                     },
                 }
             },
@@ -285,7 +375,7 @@ fn update_info_panel(
                     .map(|(biome_type, presence)| {
                         format!(
                             "Biome: {} ({:.2}%)",
-                            (<Biome>::from(biome_type).name),
+                            (<BiomeStats>::from(biome_type).name),
                             presence * 100.0
                         )
                     })
@@ -307,7 +397,7 @@ fn update_info_panel(
                     .map(|(biome_type, presence)| {
                         format!(
                             "Biome: {} ({:.2}%)",
-                            (<Biome>::from(biome_type).name),
+                            (<BiomeStats>::from(biome_type).name),
                             presence * 100.0
                         )
                     })
@@ -354,8 +444,8 @@ fn generate_graphics(
         y: (WORLD_SCALE * world.height as i32) as f32,
     };
 
-    let image_handle = images.add(Image {
-        data: world_manager.world_color_bytes(),
+    let map_image_handle = images.add(Image {
+        data: world_manager.map_color_bytes(),
         texture_descriptor: TextureDescriptor {
             label:           None,
             size:            Extent3d {
@@ -371,10 +461,30 @@ fn generate_graphics(
         },
         ..default()
     });
-    world_manager.image_handle_id = Some(image_handle.id);
+    world_manager.map_image_handle_id = Some(map_image_handle.id);
 
     #[cfg(feature = "planet_view")]
     {
+        let world = world_manager.world();
+        let planet_image_handle = images.add(Image {
+            data: world_manager.planet_color_bytes(),
+            texture_descriptor: TextureDescriptor {
+                label:           None,
+                size:            Extent3d {
+                    width: world.width,
+                    height: world.height,
+                    ..default()
+                },
+                dimension:       TextureDimension::D2,
+                format:          TextureFormat::Rgba32Float,
+                mip_level_count: 1,
+                sample_count:    1,
+                usage:           TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING,
+            },
+            ..default()
+        });
+        world_manager.planet_image_handle_id = Some(planet_image_handle.id);
+
         _ = commands.spawn_bundle(Camera3dBundle {
             camera: Camera {
                 is_active: false,
@@ -388,17 +498,25 @@ fn generate_graphics(
             .into(),
             ..default()
         });
+
+        let planet_material_handle = materials.add(
+            images
+                .get_handle(world_manager.planet_image_handle_id.unwrap())
+                .into(),
+        );
+        world_manager.planet_material_handle_id = Some(planet_material_handle.id);
+
         _ = commands.spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(Icosphere {
-                radius:       2.0,
-                subdivisions: 9,
+            mesh: meshes.add(Mesh::from(UVSphere {
+                radius: 2.0,
+                ..default()
             })),
-            material: materials.add(images.get_handle(world_manager.image_handle_id).into()),
-            transform: Transform::from_translation(default()),
+            material: planet_material_handle,
+            transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
             ..default()
         });
         _ = commands.spawn_bundle(PointLightBundle {
-            transform: Transform::from_xyz(-20.0, 20.0, 50.0),
+            transform: Transform::from_xyz(-20.0, 0.0, 50.0),
             point_light: PointLight {
                 intensity: 600000.,
                 range: 100.,
@@ -415,7 +533,7 @@ fn generate_graphics(
             ..default()
         });
     _ = commands.spawn_bundle(SpriteBundle {
-        texture: images.get_handle(world_manager.image_handle_id.unwrap()),
+        texture: images.get_handle(world_manager.map_image_handle_id.unwrap()),
         sprite: Sprite {
             custom_size: Some(custom_sprite_size),
             ..default()

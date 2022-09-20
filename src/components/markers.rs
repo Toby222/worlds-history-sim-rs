@@ -15,7 +15,7 @@ macro_rules! toolbar_enum {
     }
 }
 
-#[cfg(feature = "render")]
+#[cfg(all(feature = "render", not(feature = "planet_view")))]
 toolbar_enum!(
     GenerateWorld,
     SaveWorld,
@@ -24,6 +24,17 @@ toolbar_enum!(
     Temperature,
     Biomes,
     Contours,
+);
+#[cfg(all(feature = "render", feature = "planet_view"))]
+toolbar_enum!(
+    GenerateWorld,
+    SaveWorld,
+    LoadWorld,
+    Rainfall,
+    Temperature,
+    Biomes,
+    Contours,
+    PlanetView,
 );
 
 #[cfg(feature = "render")]
@@ -37,6 +48,8 @@ impl From<ToolbarButton> for &'static str {
             ToolbarButton::GenerateWorld => "Generate new world",
             ToolbarButton::SaveWorld => "Save",
             ToolbarButton::LoadWorld => "Load",
+            #[cfg(feature = "planet_view")]
+            ToolbarButton::PlanetView => "Toggle planet view",
         }
     }
 }

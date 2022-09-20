@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-2022, ubuntu-22.04, macos-12]
-        features: ["debug,render", render, "debug", ""]
+        features: ["debug,render", "render", "debug,planet_view", "planet_view", "debug", ""]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -27,16 +27,23 @@ jobs:
         run: |
           cargo build --release --no-default-features --features=${{ matrix.features }}
 
-      - name: Upload full binary
+      - name: Upload debug & render binary
         uses: actions/upload-artifact@v3
         if: ${{ matrix.features == 'debug,render' }}
         with:
           name: worlds-rs-${{ matrix.os }}-debug-render
           path: target/release/worlds-sim-rust*
 
-      - name: Upload partial-feature binary
+      - name: Upload debug & planet_view binary
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.features != 'debug,render' && matrix.features != '' }}
+        if: ${{ matrix.features == 'debug,planet_view' }}
+        with:
+          name: worlds-rs-${{ matrix.os }}-debug-planet_view
+          path: target/release/worlds-sim-rust*
+
+      - name: Upload non-debug binary
+        uses: actions/upload-artifact@v3
+        if: ${{ !contains(matrix.features, ',') && matrix.features != '' }}
         with:
           name: worlds-rs-${{ matrix.os }}-${{ matrix.features }}
           path: target/release/worlds-sim-rust*

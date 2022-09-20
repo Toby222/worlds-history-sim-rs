@@ -42,7 +42,7 @@ impl<'de> Deserialize<'de> for World {
             Seed,
             Terrain,
             ContinentOffsets,
-            ContinentWidths,
+            ContinentSizes,
         }
 
         struct WorldVisitor;
@@ -117,7 +117,7 @@ impl<'de> Deserialize<'de> for World {
                     seed,
                     terrain,
                     continent_offsets,
-                    continent_widths,
+                    continent_sizes: continent_widths,
 
                     max_altitude: world_attributes.max_altitude,
                     min_altitude: world_attributes.min_altitude,
@@ -173,7 +173,7 @@ impl<'de> Deserialize<'de> for World {
                             }
                             continent_offsets = Some(map.next_value()?);
                         },
-                        Field::ContinentWidths => {
+                        Field::ContinentSizes => {
                             if continent_widths.is_some() {
                                 return Err(Error::duplicate_field("continent_widths"));
                             }
@@ -227,7 +227,7 @@ impl<'de> Deserialize<'de> for World {
                     seed,
                     terrain,
                     continent_offsets,
-                    continent_widths,
+                    continent_sizes: continent_widths,
 
                     max_altitude: world_attributes.max_altitude,
                     min_altitude: world_attributes.min_altitude,

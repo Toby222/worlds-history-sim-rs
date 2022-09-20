@@ -2,9 +2,11 @@
 use bevy::log::debug;
 #[cfg(feature = "debug")]
 use bevy::utils::default;
+#[cfg(all(feature = "render", feature = "planet_view"))]
+use std::f32::consts::PI;
 #[cfg(feature = "render")]
 use {
-    crate::{Biome, TerrainCell},
+    crate::{BiomeStats, TerrainCell},
     bevy::{
         asset::{Assets, HandleId},
         render::render_resource::Extent3d,
@@ -89,9 +91,15 @@ impl Display for SaveError {
 
 #[derive(Debug)]
 pub struct WorldManager {
-    world:               Option<World>,
+    world: Option<World>,
+
     #[cfg(feature = "render")]
-    pub image_handle_id: Option<HandleId>,
+    pub map_image_handle_id:       Option<HandleId>,
+    #[cfg(all(feature = "render", feature = "planet_view"))]
+    pub planet_image_handle_id:    Option<HandleId>,
+    #[cfg(all(feature = "render", feature = "planet_view"))]
+    pub planet_material_handle_id: Option<HandleId>,
+
     #[cfg(feature = "render")]
     rainfall_visible:    bool,
     #[cfg(feature = "render")]
@@ -105,17 +113,21 @@ pub struct WorldManager {
 impl WorldManager {
     pub fn new() -> WorldManager {
         Self {
-            #[cfg(feature = "render")]
-            image_handle_id: None,
             world: None,
+            #[cfg(feature = "render")]
+            map_image_handle_id: None,
+            #[cfg(all(feature = "render", feature = "planet_view"))]
+            planet_image_handle_id: None,
+            #[cfg(all(feature = "render", feature = "planet_view"))]
+            planet_material_handle_id: None,
             #[cfg(feature = "render")]
             rainfall_visible: false,
             #[cfg(feature = "render")]
             temperature_visible: false,
             #[cfg(feature = "render")]
-            biomes_visible: false,
+            biomes_visible: true,
             #[cfg(feature = "render")]
-            contours: true,
+            contours: false,
         }
     }
 
@@ -175,7 +187,7 @@ impl WorldManager {
                 #[cfg(feature = "render")]
                 {
                     let image_handle = &images.get_handle(
-                        self.image_handle_id
+                        self.map_image_handle_id
                             .expect("Missing image handle, even though world is present"),
                     );
                     images
@@ -359,7 +371,7 @@ impl WorldManager {
         cell.biome_presences
             .iter()
             .fold(Color::BLACK, |color, (biome_type, presence)| {
-                let biome: Biome = (*biome_type).into();
+                let biome: BiomeStats = (*biome_type).into();
                 let biome_color = biome.color;
 
                 Color::rgb(
@@ -370,24 +382,67 @@ impl WorldManager {
             })
     }
 
-    #[cfg(feature = "render")]
-    pub fn world_colors(&self) -> Vec<Color> {
-        match self.get_world() {
-            None => panic!("Called world_colors before generating world"),
-            Some(world) => {
-                let terrain_cells: Vec<_> = world.terrain.iter().rev().flatten().collect();
+    // #[cfg(feature = "render")]
+    // #[must_use]
+    // fn map_colors(&self) -> Vec<Color> {
+    //     self.world()
+    //         .terrain
+    //         .iter()
+    //         .rev()
+    //         .flatten()
+    //         .map(|cell| self.generate_color(cell))
+    //         .collect()
+    // }
 
-                terrain_cells
+    #[cfg(feature = "render")]
+    #[must_use]
+    pub fn map_color_bytes(&self) -> Vec<u8> {
+        self.world()
+            .terrain
+            .iter()
+            .rev()
+            .flatten()
+            .flat_map(|cell| {
+                self.generate_color(cell)
+                    .as_rgba_f32()
                     .iter()
-                    .map(|cell| self.generate_color(cell))
-                    .collect()
-            },
-        }
+                    .flat_map(|num| num.to_le_bytes())
+                    .collect::<Vec<u8>>()
+            })
+            .collect()
     }
 
-    #[cfg(feature = "render")]
-    pub fn world_color_bytes(&self) -> Vec<u8> {
-        self.world_colors()
+    #[cfg(all(feature = "render", feature = "planet_view"))]
+    #[must_use]
+    fn planet_colors(&self) -> Vec<Color> {
+        let world = self.world();
+        let width = world.width as usize;
+        let height = world.height as usize;
+
+        let mut colors = vec![Color::PINK; height * width];
+
+        for y in 0..world.height as usize * 2 {
+            for x in 0..world.width as usize {
+                let factor_y = (1.0 - f32::cos(PI * y as f32 / (world.height * 2) as f32)) / 2.0;
+                let real_y = f32::floor(world.height as f32 * factor_y) as usize;
+                #[cfg(feature = "debug")]
+                assert!(
+                    real_y < world.height as usize,
+                    "Trying to get cell off of planet. {}/{}",
+                    real_y,
+                    world.height
+                );
+
+                colors[real_y * width + x] = self.generate_color(&world.terrain[real_y][x]);
+            }
+        }
+        colors
+    }
+
+    #[cfg(all(feature = "render", feature = "planet_view"))]
+    #[must_use]
+    pub fn planet_color_bytes(&self) -> Vec<u8> {
+        self.planet_colors()
             .iter()
             .flat_map(|color| {
                 color

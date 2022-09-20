@@ -9,7 +9,7 @@ winit = { version = "0.26.1", features=["x11"] }
 
 [features]
 debug = ["planet/debug"]
-planet_view = ["render"]
+planet_view = ["planet/planet_view", "render"]
 render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/render", "planet/render", "dep:bevy_pancam"]
 default = ["render", "debug"]
 

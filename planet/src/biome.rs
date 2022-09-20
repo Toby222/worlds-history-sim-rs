@@ -6,7 +6,7 @@ use {
 };
 
 #[derive(Debug, Clone, Default)]
-pub struct Biome {
+pub struct BiomeStats {
     pub name:            String,
     #[cfg(feature = "render")]
     pub color:           Color,
@@ -33,10 +33,10 @@ macro_rules! biome_enum {
 
 biome_enum!(IceCap, Ocean, Grassland, Forest, Taiga, Tundra, Desert, Rainforest);
 
-impl From<BiomeType> for Biome {
-    fn from(biome_type: BiomeType) -> Biome {
+impl From<BiomeType> for BiomeStats {
+    fn from(biome_type: BiomeType) -> BiomeStats {
         match biome_type {
-            BiomeType::IceCap => Biome {
+            BiomeType::IceCap => BiomeStats {
                 name: "Ice Cap".into(),
                 #[cfg(feature = "render")]
                 color: Color::rgb_u8(253, 244, 235),
@@ -47,7 +47,7 @@ impl From<BiomeType> for Biome {
                 min_temperature: World::MIN_TEMPERATURE,
                 max_temperature: -15.0,
             },
-            BiomeType::Ocean => Biome {
+            BiomeType::Ocean => BiomeStats {
                 name: "Ocean".into(),
                 #[cfg(feature = "render")]
                 color: Color::rgb_u8(28, 66, 84),
@@ -58,7 +58,7 @@ impl From<BiomeType> for Biome {
                 min_temperature: -15.0,
                 max_temperature: World::MAX_TEMPERATURE,
             },
-            BiomeType::Grassland => Biome {
+            BiomeType::Grassland => BiomeStats {
                 name: "Grassland".into(),
                 #[cfg(feature = "render")]
                 color: Color::rgb_u8(167, 177, 84),
@@ -69,7 +69,7 @@ impl From<BiomeType> for Biome {
                 min_temperature: -5.0,
                 max_temperature: World::MAX_TEMPERATURE,
             },
-            BiomeType::Forest => Biome {
+            BiomeType::Forest => BiomeStats {
                 name: "Forest".into(),
                 #[cfg(feature = "render")]
                 color: Color::rgb_u8(76, 132, 55),
@@ -80,7 +80,7 @@ impl From<BiomeType> for Biome {
                 min_temperature: -5.0,
                 max_temperature: World::MAX_TEMPERATURE,
             },
-            BiomeType::Taiga => Biome {
+            BiomeType::Taiga => BiomeStats {
                 name: "Taiga".into(),
                 #[cfg(feature = "render")]
                 color: Color::rgb_u8(43, 63, 40),
@@ -91,7 +91,7 @@ impl From<BiomeType> for Biome {
                 min_temperature: -15.0,
                 max_temperature: -0.0,
             },
-            BiomeType::Tundra => Biome {
+            BiomeType::Tundra => BiomeStats {
                 name: "Tundra ".into(),
                 #[cfg(feature = "render")]
                 color: Color::rgb_u8(139, 139, 128),
@@ -102,7 +102,7 @@ impl From<BiomeType> for Biome {
                 min_temperature: -20.0,
                 max_temperature: -0.0,
             },
-            BiomeType::Desert => Biome {
+            BiomeType::Desert => BiomeStats {
                 name: "Desert ".into(),
                 #[cfg(feature = "render")]
                 color: Color::rgb_u8(253, 225, 171),
@@ -113,7 +113,7 @@ impl From<BiomeType> for Biome {
                 min_temperature: -5.0,
                 max_temperature: World::MAX_TEMPERATURE,
             },
-            BiomeType::Rainforest => Biome {
+            BiomeType::Rainforest => BiomeStats {
                 name: "Rainforest".into(),
                 #[cfg(feature = "render")]
                 color: Color::rgb_u8(59, 103, 43),
@@ -128,8 +128,8 @@ impl From<BiomeType> for Biome {
     }
 }
 
-impl From<&BiomeType> for Biome {
-    fn from(biome_type: &BiomeType) -> Biome {
+impl From<&BiomeType> for BiomeStats {
+    fn from(biome_type: &BiomeType) -> BiomeStats {
         (*biome_type).into()
     }
 }
