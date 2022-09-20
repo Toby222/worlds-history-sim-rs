@@ -72,6 +72,7 @@ jobs:
         with:
           tag: "pre-release"
           message: "Latest pre-release"
+          force_push_tag: true
 
   create-release:
     name: "Create release"
