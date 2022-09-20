@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-2022, ubuntu-22.04, macos-12]
-        features: ["debug,render", "render", "debug,globe_view", "globe_view", "debug", ""]
+        features: ["debug,globe_view", "globe_view", "debug,render", "render", "debug", ""]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
