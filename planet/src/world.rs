@@ -83,8 +83,8 @@ pub struct TerrainCell {
 
 impl World {
     const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
-    const CONTINENT_MAX_WIDTH_FACTOR: f32 = 7.0;
-    const CONTINENT_MIN_WIDTH_FACTOR: f32 = 3.0;
+    const CONTINENT_MAX_SIZE_FACTOR: f32 = 6.0;
+    const CONTINENT_MIN_SIZE_FACTOR: f32 = 2.5;
     pub(crate) const MAX_ALTITUDE: f32 = 15000.0;
     pub(crate) const MAX_RAINFALL: f32 = 7500.0;
     pub(crate) const MAX_TEMPERATURE: f32 = 30.0;
@@ -157,12 +157,12 @@ impl World {
                 self.rng.gen_range(height * 1.0 / 6.0..height * 5.0 / 6.0);
 
             self.continent_sizes[i as usize] = Vec2 {
-                x: self.rng.gen_range(
-                    World::CONTINENT_MIN_WIDTH_FACTOR..World::CONTINENT_MAX_WIDTH_FACTOR,
-                ),
-                y: self.rng.gen_range(
-                    World::CONTINENT_MIN_WIDTH_FACTOR..World::CONTINENT_MAX_WIDTH_FACTOR,
-                ),
+                x: self
+                    .rng
+                    .gen_range(World::CONTINENT_MIN_SIZE_FACTOR..World::CONTINENT_MAX_SIZE_FACTOR),
+                y: self
+                    .rng
+                    .gen_range(World::CONTINENT_MIN_SIZE_FACTOR..World::CONTINENT_MAX_SIZE_FACTOR),
             };
         }
         info!("Done generating continents");
