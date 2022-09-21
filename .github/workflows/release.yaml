@@ -27,41 +27,63 @@ jobs:
         run: |
           cargo build --release --no-default-features --features=${{ matrix.features }}
 
-      - name: Upload debug & globe_view binary
+      - name: Upload debug & globe_view binary (Unix)
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.features == 'debug,globe_view' }}
+        if: ${{ matrix.os != 'windows-2022' && matrix.features == 'debug,globe_view' }}
+        with:
+          name: worlds-rs-${{ matrix.os }}-debug-globe_view
+          path: |
+            target/release/worlds-sim-rust
+      - name: Upload debug & render binary (Unix)
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.os != 'windows-2022' && matrix.features == 'debug,render' }}
+        with:
+          name: worlds-rs-${{ matrix.os }}-debug-render
+          path: |
+            target/release/worlds-sim-rust
+      - name: Upload non-debug binary (Unix)
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.os != 'windows-2022' && !contains(matrix.features, ',') && matrix.features != '' }}
+        with:
+          name: worlds-rs-${{ matrix.os }}-${{ matrix.features }}
+          path: |
+            target/release/worlds-sim-rust
+      - name: Upload basic binary (Unix)
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.os != 'windows-2022' && matrix.features == '' }}
+        with:
+          name: worlds-rs-${{ matrix.os }}-minimal
+          path: |
+            target/release/worlds-sim-rust
+
+      - name: Upload debug & globe_view binary (Windows)
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.os == 'windows-2022' && matrix.features == 'debug,globe_view' }}
         with:
           name: worlds-rs-${{ matrix.os }}-debug-globe_view
           path: |
             target/release/worlds-sim-rust.exe
-            target/release/worlds-sim-rust
-
-      - name: Upload debug & render binary
+      - name: Upload debug & render binary (Windows)
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.features == 'debug,render' }}
+        if: ${{ matrix.os == 'windows-2022' && matrix.features == 'debug,render' }}
         with:
           name: worlds-rs-${{ matrix.os }}-debug-render
           path: |
             target/release/worlds-sim-rust.exe
-            target/release/worlds-sim-rust
-
-      - name: Upload non-debug binary
+      - name: Upload non-debug binary (Windows)
         uses: actions/upload-artifact@v3
-        if: ${{ !contains(matrix.features, ',') && matrix.features != '' }}
+        if: ${{ matrix.os == 'windows-2022' && !contains(matrix.features, ',') && matrix.features != '' }}
         with:
           name: worlds-rs-${{ matrix.os }}-${{ matrix.features }}
           path: |
             target/release/worlds-sim-rust.exe
-            target/release/worlds-sim-rust
-
-      - name: Upload basic binary
+      - name: Upload basic binary (Windows)
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.features == '' }}
+        if: ${{ matrix.os == 'windows-2022' && matrix.features == '' }}
         with:
           name: worlds-rs-${{ matrix.os }}-minimal
           path: |
             target/release/worlds-sim-rust.exe
-            target/release/worlds-sim-rust
 
   create-tag:
     name: "Create tag"
@@ -70,7 +92,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: rickstaa/action-create-tag@v1
         with:
-          tag: "pre-release"
+          tag: latest
           message: "Latest pre-release"
           force_push_tag: true
 
@@ -81,87 +103,29 @@ jobs:
     steps:
       - uses: actions/download-artifact@v3
         with:
-          name: worlds-rs-windows-2022-debug-globe_view
-          path: ~/download/worlds-rs-windows-2022-debug-globe_view.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-windows-2022-debug-render
-          path: ~/download/worlds-rs-windows-2022-debug-render.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-windows-2022-debug
-          path: ~/download/worlds-rs-windows-2022-debug.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-windows-2022-globe_view
-          path: ~/download/worlds-rs-windows-2022-globe_view.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-windows-2022-render
-          path: ~/download/worlds-rs-windows-2022-render.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-windows-2022-minimal
-          path: ~/download/worlds-rs-windows-2022-minimal.zip
+          path: /tmp/downloads/
 
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-ubuntu-22.04-debug-globe_view
-          path: ~/download/worlds-rs-ubuntu-22.04-debug-globe_view.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-ubuntu-22.04-debug-render
-          path: ~/download/worlds-rs-ubuntu-22.04-debug-render.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-ubuntu-22.04-debug
-          path: ~/download/worlds-rs-ubuntu-22.04-debug.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-ubuntu-22.04-globe_view
-          path: ~/download/worlds-rs-ubuntu-22.04-globe_view.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-ubuntu-22.04-render
-          path: ~/download/worlds-rs-ubuntu-22.04-render.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-ubuntu-22.04-minimal
-          path: ~/download/worlds-rs-ubuntu-22.04-minimal.zip
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-macos-12-debug-globe_view
-          path: ~/download/worlds-rs-macos-12-debug-globe_view.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-macos-12-debug-render
-          path: ~/download/worlds-rs-macos-12-debug-render.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-macos-12-debug
-          path: ~/download/worlds-rs-macos-12-debug.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-macos-12-globe_view
-          path: ~/download/worlds-rs-macos-12-globe_view.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-macos-12-render
-          path: ~/download/worlds-rs-macos-12-render.zip
-      - uses: actions/download-artifact@v3
-        with:
-          name: worlds-rs-macos-12-minimal
-          path: ~/download/worlds-rs-macos-12-minimal.zip
-
-      - name: List artifacts
+      - name: Create packaged files
         run: |
-          ls -la --color=auto /home/runner/download/
+          cd /tmp/downloads/
+          for dir in */; do
+            echo "creating $(pwd)/${dir%/}.zip"
+            ( cd "$dir" && zip -9 -r ../"${dir%/}".zip . )
+            echo "created $(pwd)/${dir%/}.zip"
+            file "$(pwd)/${dir%/}.zip"
+          done
+          cd -
 
+      - name: List all artifact files
+        run: ls -la --color=auto /tmp/downloads/*.zip
+
+      - uses: actions/checkout@v3
       - name: Upload binaries
-        uses: softprops/action-gh-release@v1
-        with:
-            files: /home/runner/download/*
-            prerelease: true
-            tag_name: "pre-release"
-            generate_release_notes: true
+        uses: marvinpinto/action-automatic-releases@v1.2.1
+        with: 
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          title: "Latest build"
+          prerelease: true
+          files: |
+            /tmp/downloads/*.zip
+          automatic_release_tag: latest

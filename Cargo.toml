@@ -4,13 +4,10 @@ version = "0.1.0"
 edition = "2021"
 resolver = "2"
 
-[target.'cfg(target_os = "linux")'.dependencies]
-winit = { version = "0.26.1", features=["x11"] }
-
 [features]
 debug = ["planet/debug"]
 globe_view = ["planet/globe_view", "render"]
-render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/render", "planet/render", "dep:bevy_pancam"]
+render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/x11", "bevy/wayland", "bevy/render", "planet/render", "dep:bevy_pancam"]
 default = ["render", "debug"]
 
 [dependencies.planet]
