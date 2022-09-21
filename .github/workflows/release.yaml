@@ -89,22 +89,10 @@ jobs:
           path: |
             target/release/worlds-sim-rust.exe
 
-  create-tag:
-    name: "Create tag"
-    runs-on: ubuntu-22.04
-    needs: [compile]
-    steps:
-      - uses: actions/checkout@v3
-      - uses: rickstaa/action-create-tag@v1
-        with:
-          tag: latest
-          message: "Latest pre-release"
-          force_push_tag: true
-
   create-release:
     name: "Create release"
     runs-on: ubuntu-22.04
-    needs: [compile, create-tag]
+    needs: [compile]
     steps:
       - uses: actions/download-artifact@v3
         with:
