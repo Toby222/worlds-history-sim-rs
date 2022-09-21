@@ -61,7 +61,7 @@ impl PluginGroup for WorldPlugins {
         }
 
         _ = group.add(DiagnosticsPlugin::default());
-        #[cfg(all(feature = "debug"))]
+        #[cfg(all(feature = "logging"))]
         {
             use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
             _ = group.add(FrameTimeDiagnosticsPlugin::default());

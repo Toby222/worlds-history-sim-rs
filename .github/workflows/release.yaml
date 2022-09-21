@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-2022, ubuntu-22.04, macos-12]
-        features: ["debug,globe_view", "globe_view", "debug,render", "render", "debug", ""]
+        features: ["logging,globe_view", "globe_view", "logging,render", "render", "logging", ""]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -31,21 +31,21 @@ jobs:
         run: |
           cargo build --release --no-default-features --features=${{ matrix.features }}
 
-      - name: Upload debug & globe_view binary (Unix)
+      - name: Upload logging & globe_view binary (Unix)
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.os != 'windows-2022' && matrix.features == 'debug,globe_view' }}
+        if: ${{ matrix.os != 'windows-2022' && matrix.features == 'logging,globe_view' }}
         with:
-          name: worlds-rs-${{ matrix.os }}-debug-globe_view
+          name: worlds-rs-${{ matrix.os }}-logging-globe_view
           path: |
             target/release/worlds-sim-rust
-      - name: Upload debug & render binary (Unix)
+      - name: Upload logging & render binary (Unix)
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.os != 'windows-2022' && matrix.features == 'debug,render' }}
+        if: ${{ matrix.os != 'windows-2022' && matrix.features == 'logging,render' }}
         with:
-          name: worlds-rs-${{ matrix.os }}-debug-render
+          name: worlds-rs-${{ matrix.os }}-logging-render
           path: |
             target/release/worlds-sim-rust
-      - name: Upload non-debug binary (Unix)
+      - name: Upload non-logging binary (Unix)
         uses: actions/upload-artifact@v3
         if: ${{ matrix.os != 'windows-2022' && !contains(matrix.features, ',') && matrix.features != '' }}
         with:
@@ -60,21 +60,21 @@ jobs:
           path: |
             target/release/worlds-sim-rust
 
-      - name: Upload debug & globe_view binary (Windows)
+      - name: Upload logging & globe_view binary (Windows)
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.os == 'windows-2022' && matrix.features == 'debug,globe_view' }}
+        if: ${{ matrix.os == 'windows-2022' && matrix.features == 'logging,globe_view' }}
         with:
-          name: worlds-rs-${{ matrix.os }}-debug-globe_view
+          name: worlds-rs-${{ matrix.os }}-logging-globe_view
           path: |
             target/release/worlds-sim-rust.exe
-      - name: Upload debug & render binary (Windows)
+      - name: Upload logging & render binary (Windows)
         uses: actions/upload-artifact@v3
-        if: ${{ matrix.os == 'windows-2022' && matrix.features == 'debug,render' }}
+        if: ${{ matrix.os == 'windows-2022' && matrix.features == 'logging,render' }}
         with:
-          name: worlds-rs-${{ matrix.os }}-debug-render
+          name: worlds-rs-${{ matrix.os }}-logging-render
           path: |
             target/release/worlds-sim-rust.exe
-      - name: Upload non-debug binary (Windows)
+      - name: Upload non-logging binary (Windows)
         uses: actions/upload-artifact@v3
         if: ${{ matrix.os == 'windows-2022' && !contains(matrix.features, ',') && matrix.features != '' }}
         with:

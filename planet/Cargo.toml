@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-debug = []
+logging = []
 globe_view = ["render"]
 render = ["bevy/render"]
-default = ["render", "debug", "globe_view"]
+default = ["render", "logging", "globe_view"]
 
 [dependencies.rand]
 version = "0.8.5"

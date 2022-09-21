@@ -38,7 +38,7 @@ pub(crate) mod plugins;
 pub(crate) mod resources;
 pub(crate) mod ui_helpers;
 
-#[cfg(all(feature = "debug", feature = "render"))]
+#[cfg(all(feature = "logging", feature = "render"))]
 use bevy::{
     diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
     log::debug,
@@ -126,7 +126,7 @@ fn refresh_map_texture(
     world_manager: &WorldManager,
 ) {
     let world = world_manager.world();
-    #[cfg(feature = "debug")]
+    #[cfg(feature = "logging")]
     debug!("refreshing world texture");
     let map_image_handle = images.get_handle(
         world_manager
@@ -210,7 +210,7 @@ fn handle_toolbar_button(
                 *color = PRESSED_BUTTON.into();
                 match toolbar_button {
                     ToolbarButton::Rainfall => {
-                        #[cfg(feature = "debug")]
+                        #[cfg(feature = "logging")]
                         debug!("Toggling rainfall");
                         world_manager.toggle_rainfall();
                         refresh_map_texture(
@@ -221,7 +221,7 @@ fn handle_toolbar_button(
                         );
                     },
                     ToolbarButton::Temperature => {
-                        #[cfg(feature = "debug")]
+                        #[cfg(feature = "logging")]
                         debug!("Toggling temperature");
                         world_manager.toggle_temperature();
                         refresh_map_texture(
@@ -232,7 +232,7 @@ fn handle_toolbar_button(
                         );
                     },
                     ToolbarButton::PlanetView => {
-                        #[cfg(feature = "debug")]
+                        #[cfg(feature = "logging")]
                         debug!("Cycling planet view");
                         world_manager.cycle_view();
                         refresh_map_texture(
@@ -243,7 +243,7 @@ fn handle_toolbar_button(
                         );
                     },
                     ToolbarButton::Contours => {
-                        #[cfg(feature = "debug")]
+                        #[cfg(feature = "logging")]
                         debug!("Toggling contours");
                         world_manager.toggle_contours();
                         refresh_map_texture(
@@ -254,7 +254,7 @@ fn handle_toolbar_button(
                         );
                     },
                     ToolbarButton::GenerateWorld => {
-                        #[cfg(feature = "debug")]
+                        #[cfg(feature = "logging")]
                         debug!("Generating new world");
                         _ = world_manager
                             .new_world()
@@ -267,12 +267,12 @@ fn handle_toolbar_button(
                         );
                     },
                     ToolbarButton::SaveWorld => {
-                        #[cfg(feature = "debug")]
+                        #[cfg(feature = "logging")]
                         debug!("Saving world");
                         _ = world_manager.save_world("planet.ron");
                     },
                     ToolbarButton::LoadWorld => {
-                        #[cfg(feature = "debug")]
+                        #[cfg(feature = "logging")]
                         debug!("Loading world");
                         _ = world_manager.load_world("planet.ron", &mut images);
                         refresh_map_texture(
@@ -284,7 +284,7 @@ fn handle_toolbar_button(
                     },
                     #[cfg(feature = "globe_view")]
                     ToolbarButton::GlobeView => {
-                        #[cfg(feature = "debug")]
+                        #[cfg(feature = "logging")]
                         debug!("Toggling globe view");
                         let mut camera_3d = camera_3d_query.single_mut();
                         camera_3d.is_active = !camera_3d.is_active;
@@ -347,7 +347,7 @@ fn rotate_globe(mut globe_transform: Query<'_, '_, &mut Transform, With<Handle<M
 
 #[cfg(feature = "render")]
 fn update_info_panel(
-    #[cfg(feature = "debug")] diagnostics: Res<'_, Diagnostics>,
+    #[cfg(feature = "logging")] diagnostics: Res<'_, Diagnostics>,
     cursor_position: Res<'_, CursorMapPosition>,
     world_manager: Res<'_, WorldManager>,
     mut text: Query<'_, '_, &mut Text, With<InfoPanel>>,
@@ -360,7 +360,7 @@ fn update_info_panel(
     {
         let cell = &world.terrain[cursor_position.y as usize][cursor_position.x as usize];
 
-        #[cfg(feature = "debug")]
+        #[cfg(feature = "logging")]
         {
             format!(
                 "FPS: ~{}\nMouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}\n\n{}",
@@ -386,7 +386,7 @@ fn update_info_panel(
             )
         }
 
-        #[cfg(not(feature = "debug"))]
+        #[cfg(not(feature = "logging"))]
         {
             format!(
                 "Mouse position: {}\nAltitude: {}\nRainfall: {}\nTemperature: {}\n{}",
@@ -408,7 +408,7 @@ fn update_info_panel(
             )
         }
     } else {
-        #[cfg(feature = "debug")]
+        #[cfg(feature = "logging")]
         {
             format!(
                 "FPS: ~{}\nMouse position: {}\nOut of bounds",
@@ -420,7 +420,7 @@ fn update_info_panel(
             )
         }
 
-        #[cfg(not(feature = "debug"))]
+        #[cfg(not(feature = "logging"))]
         {
             format!("Mouse position: {}\nOut of bounds", *cursor_position)
         }
@@ -644,9 +644,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     _ = app.insert_resource(LogSettings {
-        #[cfg(feature = "debug")]
+        #[cfg(feature = "logging")]
         level: Level::DEBUG,
-        #[cfg(not(feature = "debug"))]
+        #[cfg(not(feature = "logging"))]
         level: Level::WARN,
         ..default()
     });

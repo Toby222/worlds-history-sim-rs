@@ -1,6 +1,6 @@
-#[cfg(all(feature = "debug", feature = "render"))]
+#[cfg(all(feature = "logging", feature = "render"))]
 use bevy::log::debug;
-#[cfg(feature = "debug")]
+#[cfg(feature = "logging")]
 use bevy::utils::default;
 #[cfg(all(feature = "render", feature = "globe_view"))]
 use std::f32::consts::PI;
@@ -142,7 +142,7 @@ impl WorldManager {
                 return Err(SaveError::MissingWorld);
             },
         };
-        #[cfg(feature = "debug")]
+        #[cfg(feature = "logging")]
         let serialized = match ron::ser::to_string_pretty(world, default()) {
             Ok(serialized) => serialized,
             Err(err) => {
@@ -150,7 +150,7 @@ impl WorldManager {
             },
         };
 
-        #[cfg(not(feature = "debug"))]
+        #[cfg(not(feature = "logging"))]
         let serialized = match ron::to_string(world) {
             Ok(serialized) => serialized,
             Err(err) => {
@@ -210,7 +210,7 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     pub fn toggle_rainfall(&mut self) {
-        #[cfg(feature = "debug")]
+        #[cfg(feature = "logging")]
         if self.rainfall_visible {
             debug!("Turning rainfall off");
         } else {
@@ -221,7 +221,7 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     pub fn toggle_temperature(&mut self) {
-        #[cfg(feature = "debug")]
+        #[cfg(feature = "logging")]
         if self.temperature_visible {
             debug!("Turning temperature off");
         } else {
@@ -237,7 +237,7 @@ impl WorldManager {
             .unwrap()
             + 1)
             % PlanetView::ITEM_COUNT;
-        #[cfg(feature = "debug")]
+        #[cfg(feature = "logging")]
         debug!(
             "Cycling view from {:#?} to {:#?}",
             self.view,
@@ -248,7 +248,7 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     pub fn toggle_contours(&mut self) {
-        #[cfg(feature = "debug")]
+        #[cfg(feature = "logging")]
         if self.contours {
             debug!("Turning terrain contours off");
         } else {
@@ -440,7 +440,7 @@ impl WorldManager {
             for x in 0..world.width as usize {
                 let factor_y = (1.0 - f32::cos(PI * y as f32 / (world.height * 2) as f32)) / 2.0;
                 let real_y = f32::floor(world.height as f32 * factor_y) as usize;
-                #[cfg(feature = "debug")]
+                #[cfg(feature = "logging")]
                 assert!(
                     real_y < world.height as usize,
                     "Trying to get cell off of planet. {}/{}",
