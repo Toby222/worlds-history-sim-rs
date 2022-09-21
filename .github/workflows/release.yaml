@@ -22,9 +22,10 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-      - name: Install wayland dependency on linux
+      - name: Install linux dependencies
         if: ${{ matrix.os == 'ubuntu-22.04' }}
-        run: sudo apt-get install -y libwayland-dev
+        run: |
+          sudo apt-get install -y libwayland-dev xkbcommon
 
       - name: Build binary
         run: |
