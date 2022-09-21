@@ -25,7 +25,7 @@ jobs:
       - name: Install linux dependencies
         if: ${{ matrix.os == 'ubuntu-22.04' }}
         run: |
-          sudo apt-get install -y libwayland-dev xkbcommon
+          sudo apt-get install -y libwayland-dev libxkbcommon-dev
 
       - name: Build binary
         run: |
