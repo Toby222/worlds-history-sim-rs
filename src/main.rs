@@ -89,7 +89,7 @@ use {
     },
     components::{
         markers::{InfoPanel, ToolbarButton},
-        third_party::PanCam,
+        panning::Pan2d,
     },
     planet::BiomeStats,
     resources::CursorMapPosition,
@@ -198,7 +198,7 @@ fn handle_toolbar_button(
     #[cfg(feature = "globe_view")] mut camera_2d_query: Query<
         '_,
         '_,
-        (&mut Camera, &mut PanCam),
+        (&mut Camera, &mut Pan2d),
         (With<Camera2d>, Without<Camera3d>),
     >,
     #[cfg(feature = "globe_view")] mut materials: ResMut<'_, Assets<StandardMaterial>>,
@@ -529,20 +529,17 @@ fn generate_graphics(
         });
     }
 
+    _ = commands.spawn_bundle(Camera2dBundle::default());
     _ = commands
-        .spawn_bundle(Camera2dBundle { ..default() })
-        .insert(PanCam {
-            max_scale: Some(80.0),
+        .spawn_bundle(SpriteBundle {
+            texture: images.get_handle(world_manager.map_image_handle_id.unwrap()),
+            sprite: Sprite {
+                custom_size: Some(custom_sprite_size),
+                ..default()
+            },
             ..default()
-        });
-    _ = commands.spawn_bundle(SpriteBundle {
-        texture: images.get_handle(world_manager.map_image_handle_id.unwrap()),
-        sprite: Sprite {
-            custom_size: Some(custom_sprite_size),
-            ..default()
-        },
-        ..default()
-    });
+        })
+        .insert(Pan2d::new());
 
     _ = commands
         .spawn_bundle(NodeBundle {

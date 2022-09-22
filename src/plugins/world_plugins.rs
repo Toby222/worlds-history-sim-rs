@@ -18,6 +18,7 @@ impl PluginGroup for WorldPlugins {
         #[cfg(feature = "render")]
         {
             use {
+                crate::plugins::panning_plugin::PanningPlugin,
                 bevy::{
                     asset::AssetPlugin,
                     core_pipeline::CorePipelinePlugin,
@@ -31,7 +32,6 @@ impl PluginGroup for WorldPlugins {
                     window::WindowPlugin,
                     winit::WinitPlugin,
                 },
-                bevy_pancam::PanCamPlugin,
             };
 
             _ = group
@@ -47,7 +47,7 @@ impl PluginGroup for WorldPlugins {
                 .add(SpritePlugin::default())
                 .add(TextPlugin::default())
                 .add(UiPlugin::default())
-                .add(PanCamPlugin::default());
+                .add(PanningPlugin::default());
             #[cfg(feature = "globe_view")]
             {
                 use bevy::pbr::PbrPlugin;
