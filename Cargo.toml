@@ -1,8 +1,11 @@
 [package]
-name = "worlds-sim-rust"
+name = "worlds-history-sim-rs"
 version = "0.1.0"
 edition = "2021"
 resolver = "2"
+
+[profile]
+release = { strip = "symbols", lto = "thin", opt-level = "z" }
 
 [features]
 logging = ["planet/logging"]

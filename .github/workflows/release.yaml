@@ -1,17 +1,51 @@
----
-name: pre-release
+name: Release
 on:
   push:
-    branches:
-      - "main"
+    tags:
+      - "v*"
 
 jobs:
   compile:
-    name: "Compilation"
+    name: Build release binaries
     strategy:
       matrix:
-        os: [windows-2022, ubuntu-22.04, macos-12]
-        features: ["logging,globe_view", "globe_view", "logging,render", "render", "logging", ""]
+        include:
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            features: globe_view
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            features: globe_view
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            features: globe_view
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            features: globe_view
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            features: render
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            features: render
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            features: render
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            features: render
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            features: ""
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            features: ""
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            features: ""
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            features: ""
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -22,103 +56,87 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
+          target: ${{ matrix.target }}
+
       - name: Install linux dependencies
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get install -y libwayland-dev libxkbcommon-dev
+          sudo apt-get install -y libwayland-client0 libwayland-dev libxkbcommon-dev
 
-      - name: Build binary
-        run: |
-          cargo build --release --no-default-features --features=${{ matrix.features }}
+      - run: cargo build --release --locked --target ${{ matrix.target }} --no-default-features --features=${{ matrix.features }}
 
-      - name: Upload logging & globe_view binary (Unix)
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.os != 'windows-2022' && matrix.features == 'logging,globe_view' }}
+      - name: Post-Build | Compress [Features; -nix]
+        if: matrix.features != '' && !contains(matrix.os, 'windows')
+        uses: a7ul/tar-action@v1.1.0
         with:
-          name: worlds-rs-${{ matrix.os }}-logging-globe_view
-          path: |
-            target/release/worlds-sim-rust
-      - name: Upload logging & render binary (Unix)
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.os != 'windows-2022' && matrix.features == 'logging,render' }}
+          command: c
+          cwd: ./target/${{ matrix.target }}/release/
+          files: worlds-history-sim-rs
+          outPath: worlds-history-sim-rs-${{ matrix.target }}-${{ matrix.features }}.tar.gz
+      - name: Post-Build | Compress [Minimal; -nix]
+        if: matrix.features == '' && !contains(matrix.os, 'windows')
+        uses: a7ul/tar-action@v1.1.0
         with:
-          name: worlds-rs-${{ matrix.os }}-logging-render
-          path: |
-            target/release/worlds-sim-rust
-      - name: Upload non-logging binary (Unix)
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.os != 'windows-2022' && !contains(matrix.features, ',') && matrix.features != '' }}
-        with:
-          name: worlds-rs-${{ matrix.os }}-${{ matrix.features }}
-          path: |
-            target/release/worlds-sim-rust
-      - name: Upload basic binary (Unix)
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.os != 'windows-2022' && matrix.features == '' }}
-        with:
-          name: worlds-rs-${{ matrix.os }}-minimal
-          path: |
-            target/release/worlds-sim-rust
+          command: c
+          cwd: ./target/${{ matrix.target }}/release/
+          files: worlds-history-sim-rs
+          outPath: worlds-history-sim-rs-${{ matrix.target }}-minimal.tar.gz
 
-      - name: Upload logging & globe_view binary (Windows)
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.os == 'windows-2022' && matrix.features == 'logging,globe_view' }}
+      - name: Post-Build | Compress [Features; Windows]
+        if: matrix.features != '' && contains(matrix.os, 'windows')
+        uses: a7ul/tar-action@v1.1.0
         with:
-          name: worlds-rs-${{ matrix.os }}-logging-globe_view
-          path: |
-            target/release/worlds-sim-rust.exe
-      - name: Upload logging & render binary (Windows)
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.os == 'windows-2022' && matrix.features == 'logging,render' }}
+          command: c
+          cwd: ./target/${{ matrix.target }}/release/
+          files: worlds-history-sim-rs.exe
+          outPath: worlds-history-sim-rs-${{ matrix.target }}-${{ matrix.features }}.tar.gz
+      - name: Post-Build | Compress [Minimal; Windows]
+        if: matrix.features == '' && contains(matrix.os, 'windows')
+        uses: a7ul/tar-action@v1.1.0
         with:
-          name: worlds-rs-${{ matrix.os }}-logging-render
-          path: |
-            target/release/worlds-sim-rust.exe
-      - name: Upload non-logging binary (Windows)
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.os == 'windows-2022' && !contains(matrix.features, ',') && matrix.features != '' }}
-        with:
-          name: worlds-rs-${{ matrix.os }}-${{ matrix.features }}
-          path: |
-            target/release/worlds-sim-rust.exe
-      - name: Upload basic binary (Windows)
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.os == 'windows-2022' && matrix.features == '' }}
-        with:
-          name: worlds-rs-${{ matrix.os }}-minimal
-          path: |
-            target/release/worlds-sim-rust.exe
+          command: c
+          cwd: ./target/${{ matrix.target }}/release/
+          files: worlds-history-sim-rs.exe
+          outPath: worlds-history-sim-rs-${{ matrix.target }}-minimal.tar.gz
 
-  create-release:
-    name: "Create release"
-    runs-on: ubuntu-22.04
+      - name: Deploy | Upload Artifacts [Features]
+        if: matrix.features != ''
+        uses: actions/upload-artifact@v3
+        with:
+          if-no-files-found: error
+          name: worlds-history-sim-rs-${{ matrix.target }}-${{ matrix.features }}
+          path: worlds-history-sim-rs-${{ matrix.target }}-${{ matrix.features }}.tar.gz
+
+      - name: Deploy | Upload Artifacts [Minimal]
+        if: matrix.features == ''
+        uses: actions/upload-artifact@v3
+        with:
+          if-no-files-found: error
+          name: worlds-history-sim-rs-${{ matrix.target }}-minimal
+          path: worlds-history-sim-rs-${{ matrix.target }}-minimal.tar.gz
+
+  github-release:
+    name: GitHub release
+    runs-on: ubuntu-latest
     needs: [compile]
     steps:
-      - uses: actions/download-artifact@v3
-        with:
-          path: /tmp/downloads/
+      - name: Setup | Checkout
+        uses: actions/checkout@v3
 
-      - name: Create packaged files
-        run: |
-          cd /tmp/downloads/
-          for dir in */; do
-            echo "creating $(pwd)/${dir%/}.zip"
-            ( cd "$dir" && zip -9 -r ../"${dir%/}".zip . )
-            echo "created $(pwd)/${dir%/}.zip"
-            file "$(pwd)/${dir%/}.zip"
-          done
-          cd -
+      - name: Setup | Artifacts
+        uses: actions/download-artifact@v3
 
-      - name: List all artifact files
-        run: ls -la --color=auto /tmp/downloads/*.zip
+      - name: Setup | Checksums
+        run: for file in worlds-history-sim-rs-**/*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
-      - uses: actions/checkout@v3
-      - name: Upload binaries
+      - run: ls **/*
+
+      - name: Publish
         uses: marvinpinto/action-automatic-releases@v1.2.1
-        with: 
+        with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          title: "Latest build"
-          prerelease: true
+          prerelease: ${{ contains(github.ref_name, 'pre') }}
           files: |
-            /tmp/downloads/*.zip
-          automatic_release_tag: latest
+            **/*.sha256
+            **/*.tar.gz
+            LICENSE
