@@ -269,18 +269,23 @@ fn handle_toolbar_button(
                     ToolbarButton::SaveWorld => {
                         #[cfg(feature = "logging")]
                         debug!("Saving world");
-                        _ = world_manager.save_world("planet.ron");
+                        if let Err(err) = world_manager.save_world("planet.ron") {
+                            eprintln!("Failed to save planet.ron: {}", err);
+                        }
                     },
                     ToolbarButton::LoadWorld => {
                         #[cfg(feature = "logging")]
                         debug!("Loading world");
-                        _ = world_manager.load_world("planet.ron", &mut images);
-                        refresh_map_texture(
-                            &mut images,
-                            #[cfg(feature = "globe_view")]
-                            &mut materials,
-                            &world_manager,
-                        );
+                        if let Err(err) = world_manager.load_world("planet.ron", &mut images) {
+                            eprintln!("Failed to load planet.ron: {}", err);
+                        } else {
+                            refresh_map_texture(
+                                &mut images,
+                                #[cfg(feature = "globe_view")]
+                                &mut materials,
+                                &world_manager,
+                            );
+                        }
                     },
                     #[cfg(feature = "globe_view")]
                     ToolbarButton::GlobeView => {

@@ -33,9 +33,9 @@
 #![warn(variant_size_differences)]
 
 pub mod world;
-pub use world::*;
+pub use world::{TerrainCell, World, WorldGenError};
 pub mod biome;
-pub use biome::*;
+pub use biome::{BiomeStats, BiomeType};
 pub mod world_manager;
 pub use world_manager::WorldManager;
 pub(crate) mod macros;
