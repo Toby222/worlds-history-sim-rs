@@ -529,17 +529,17 @@ fn generate_graphics(
         });
     }
 
-    _ = commands.spawn_bundle(Camera2dBundle::default());
     _ = commands
-        .spawn_bundle(SpriteBundle {
-            texture: images.get_handle(world_manager.map_image_handle_id.unwrap()),
-            sprite: Sprite {
-                custom_size: Some(custom_sprite_size),
-                ..default()
-            },
-            ..default()
-        })
+        .spawn_bundle(Camera2dBundle::default())
         .insert(Pan2d::new());
+    _ = commands.spawn_bundle(SpriteBundle {
+        texture: images.get_handle(world_manager.map_image_handle_id.unwrap()),
+        sprite: Sprite {
+            custom_size: Some(custom_sprite_size),
+            ..default()
+        },
+        ..default()
+    });
 
     _ = commands
         .spawn_bundle(NodeBundle {
