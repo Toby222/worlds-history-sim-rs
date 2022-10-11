@@ -10,13 +10,23 @@ release = { strip = "symbols", lto = "thin", opt-level = "z" }
 [features]
 logging = ["planet/logging"]
 globe_view = ["planet/globe_view", "render"]
-render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/x11", "bevy/wayland", "bevy/render", "planet/render"]
-default = ["render", "logging"]
+render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/x11", "bevy/wayland", "bevy/render", "planet/render", "dep:fxhash", "dep:bevy_egui"]
+default = ["render", "logging", "globe_view"]
 
 [dependencies.planet]
 path = "planet"
 default-features = false
 
 [dependencies.bevy]
-version = "0.8"
+version = "0.8.1"
 default-features = false
+
+[dependencies.fxhash]
+version = "0.2.1"
+optional = true
+
+[dependencies.bevy_egui]
+version = "0.16.1"
+optional = true
+default-features = false
+# features = ["manage_clipboard"] # In the future, when I add text input.

@@ -10,10 +10,7 @@ use bevy::{
 
 impl PluginGroup for WorldPlugins {
     fn build(&mut self, group: &mut PluginGroupBuilder) {
-        _ = group
-            .add(LogPlugin::default())
-            .add(CorePlugin::default())
-            .add(TimePlugin::default());
+        _ = group.add(LogPlugin).add(CorePlugin).add(TimePlugin);
 
         #[cfg(feature = "render")]
         {
@@ -32,39 +29,41 @@ impl PluginGroup for WorldPlugins {
                     window::WindowPlugin,
                     winit::WinitPlugin,
                 },
+                bevy_egui::EguiPlugin,
             };
 
             _ = group
-                .add(TransformPlugin::default())
+                .add(TransformPlugin)
                 // hierarchy
-                .add(InputPlugin::default())
-                .add(WindowPlugin::default())
-                .add(AssetPlugin::default())
-                .add(HierarchyPlugin::default())
-                .add(WinitPlugin::default())
-                .add(RenderPlugin::default())
-                .add(CorePipelinePlugin::default())
-                .add(SpritePlugin::default())
-                .add(TextPlugin::default())
-                .add(UiPlugin::default())
-                .add(PanningPlugin::default());
+                .add(InputPlugin)
+                .add(WindowPlugin)
+                .add(AssetPlugin)
+                .add(HierarchyPlugin)
+                .add(WinitPlugin)
+                .add(RenderPlugin)
+                .add(CorePipelinePlugin)
+                .add(SpritePlugin)
+                .add(TextPlugin)
+                .add(UiPlugin)
+                .add(PanningPlugin)
+                .add(EguiPlugin);
             #[cfg(feature = "globe_view")]
             {
                 use bevy::pbr::PbrPlugin;
-                _ = group.add(PbrPlugin::default())
+                _ = group.add(PbrPlugin)
             }
         }
         #[cfg(not(feature = "render"))]
         {
             use bevy::app::ScheduleRunnerPlugin;
-            _ = group.add(ScheduleRunnerPlugin::default());
+            _ = group.add(ScheduleRunnerPlugin);
         }
 
-        _ = group.add(DiagnosticsPlugin::default());
+        _ = group.add(DiagnosticsPlugin);
         #[cfg(all(feature = "logging"))]
         {
             use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-            _ = group.add(FrameTimeDiagnosticsPlugin::default());
+            _ = group.add(FrameTimeDiagnosticsPlugin);
         }
         _ = group.add(LogDiagnosticsPlugin::default());
     }
