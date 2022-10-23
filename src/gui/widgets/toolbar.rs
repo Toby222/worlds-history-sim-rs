@@ -1,18 +1,27 @@
+#[cfg(feature = "globe_view")]
+use {
+    crate::components::panning::Pan2d,
+    bevy::{
+        core_pipeline::{core_2d::Camera2d, core_3d::Camera3d},
+        ecs::query::{With, Without},
+        render::camera::Camera,
+    },
+};
 use {
     crate::{
-        components::panning::Pan2d,
         gui::{WidgetId, WidgetSystem},
         macros::iterable_enum,
     },
     bevy::{
+        asset::Assets,
         ecs::{
+            change_detection::Mut,
             component::Component,
             system::{SystemParam, SystemState},
             world::World,
         },
         log::debug,
-        prelude::{Assets, Camera, Camera2d, Camera3d, Image, Mut, With, Without},
-        render::render_resource::Extent3d,
+        render::{render_resource::Extent3d, texture::Image},
     },
     bevy_egui::egui::{Layout, Ui},
     planet::WorldManager,

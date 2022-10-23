@@ -1,5 +1,3 @@
-use gui::widgets::{InfoPanel, ToolbarWidget};
-
 pub(crate) mod components;
 #[cfg(feature = "render")]
 pub(crate) mod gui;
@@ -7,14 +5,17 @@ pub(crate) mod macros;
 pub(crate) mod plugins;
 pub(crate) mod resources;
 
+#[cfg(all(feature = "render", feature = "logging"))]
+use {
+    bevy::diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
+    bevy_egui::egui::Frame,
+};
 use {
     bevy::{
         app::App,
         log::LogSettings,
-        prelude::{IntoExclusiveSystem, World},
         utils::{default, tracing::Level},
     },
-    bevy_egui::egui::{FontData, FontDefinitions, FontFamily},
     planet::WorldManager,
     plugins::WorldPlugins,
 };
@@ -26,7 +27,8 @@ use {
         ecs::{
             change_detection::{Mut, ResMut},
             query::With,
-            system::{Commands, Query, Res},
+            system::{Commands, IntoExclusiveSystem, Query, Res},
+            world::World,
         },
         prelude::Vec2,
         render::{
@@ -45,9 +47,15 @@ use {
         window::{WindowDescriptor, Windows},
         winit::WinitSettings,
     },
-    bevy_egui::EguiContext,
+    bevy_egui::{
+        egui::{FontData, FontDefinitions, FontFamily},
+        EguiContext,
+    },
     components::panning::Pan2d,
-    gui::widget,
+    gui::{
+        widget,
+        widgets::{InfoPanel, ToolbarWidget},
+    },
     resources::CursorMapPosition,
 };
 #[cfg(all(feature = "render", feature = "globe_view"))]
@@ -239,15 +247,33 @@ fn generate_graphics(
     }
 }
 
+#[cfg(feature = "render")]
 fn update_gui(world: &mut World) {
-    debug_assert!(world.contains_resource::<WorldManager>());
     world.resource_scope(|world, mut ctx: Mut<'_, EguiContext>| {
         let ctx = ctx.ctx_mut();
-        _ = bevy_egui::egui::Window::new("Info panel")
+        _ = bevy_egui::egui::Window::new("Tile Info")
             .resizable(false)
             .show(ctx, |ui| {
-                widget::<InfoPanel<'_, '_>>(world, ui, "Map Info Panel".into());
+                widget::<InfoPanel<'_, '_>>(world, ui, "Tile Info Panel".into());
             });
+
+        #[cfg(feature = "logging")]
+        {
+            bevy_egui::egui::CentralPanel::default()
+                .frame(Frame::none())
+                .show(ctx, |ui| {
+                    _ = ui.label(format!(
+                        "{:.0}",
+                        match world
+                            .resource::<Diagnostics>()
+                            .get_measurement(FrameTimeDiagnosticsPlugin::FPS)
+                        {
+                            None => f64::NAN,
+                            Some(fps) => fps.value,
+                        }
+                    ));
+                });
+        }
 
         _ = bevy_egui::egui::TopBottomPanel::bottom("Toolbar")
             .resizable(false)
