@@ -240,6 +240,7 @@ fn generate_graphics(
 }
 
 fn update_gui(world: &mut World) {
+    debug_assert!(world.contains_resource::<WorldManager>());
     world.resource_scope(|world, mut ctx: Mut<'_, EguiContext>| {
         let ctx = ctx.ctx_mut();
         _ = bevy_egui::egui::Window::new("Info panel")

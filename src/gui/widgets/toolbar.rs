@@ -40,88 +40,77 @@ iterable_enum!(ToolbarButton {
     Contours,
     GlobeView,
 });
-fn update_textures(world: &mut World) {
+fn update_textures(world_manager: &WorldManager, images: &mut Mut<Assets<Image>>) {
     debug!("refreshing world texture");
-    world.resource_scope(|world, world_manager: Mut<WorldManager>| {
-        let mut images = world.resource_mut::<Assets<Image>>();
-
-        let map_image_handle = images.get_handle(
-            world_manager
-                .map_image_handle_id
-                .expect("No map image handle"),
-        );
-        let map_image = images
-            .get_mut(&map_image_handle)
-            .expect("Map image handle pointing to non-existing image");
-        map_image.resize(Extent3d {
-            width:                 world_manager.world().width,
-            height:                world_manager.world().height,
-            depth_or_array_layers: 1,
-        });
-        map_image.data = world_manager.map_color_bytes();
+    let map_image_handle = images.get_handle(
+        world_manager
+            .map_image_handle_id
+            .expect("No map image handle"),
+    );
+    let map_image = images
+        .get_mut(&map_image_handle)
+        .expect("Map image handle pointing to non-existing image");
+    map_image.resize(Extent3d {
+        width:                 world_manager.world().width,
+        height:                world_manager.world().height,
+        depth_or_array_layers: 1,
     });
+    map_image.data = world_manager.map_color_bytes();
 }
 impl ToolbarButton {
     fn clicked(self, world: &mut World) {
-        match self {
-            ToolbarButton::GenerateWorld => {
-                world.resource_scope(|world, mut world_manager: Mut<'_, WorldManager>| {
-                    match world_manager.new_world() {
-                        Err(err) => {
-                            eprintln!("Failed to generate world: {}", err);
-                        },
-                        Ok(_) => {
-                            update_textures(world);
-                        },
-                    }
-                })
-            },
-            ToolbarButton::SaveWorld => {
-                if let Err(err) = world.resource::<WorldManager>().save_world("planet.ron") {
-                    eprintln!("Failed to save planet.ron: {}", err);
-                }
-            },
-            ToolbarButton::LoadWorld => {
-                world.resource_scope(|world, mut images: Mut<'_, Assets<Image>>| {
-                    if let Err(err) = world
-                        .resource_mut::<WorldManager>()
-                        .load_world("planet.ron", &mut images)
-                    {
-                        eprintln!("Failed to save planet.ron: {}", err);
+        world.resource_scope(|world, mut world_manager: Mut<'_, WorldManager>| {
+            match self {
+                ToolbarButton::GenerateWorld => {
+                    if let Err(err) = world_manager.new_world() {
+                        eprintln!("Failed to generate world: {}", err);
                     } else {
-                        update_textures(world);
+                        update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
                     }
-                });
-            },
-            ToolbarButton::Rainfall => {
-                world.resource_mut::<WorldManager>().toggle_rainfall();
-                update_textures(world);
-            },
-            ToolbarButton::Temperature => {
-                world.resource_mut::<WorldManager>().toggle_temperature();
-                update_textures(world);
-            },
-            ToolbarButton::PlanetView => {
-                world.resource_mut::<WorldManager>().cycle_view();
-                update_textures(world);
-            },
-            ToolbarButton::Contours => {
-                world.resource_mut::<WorldManager>().toggle_contours();
-                update_textures(world);
-            },
-            #[cfg(feature = "globe_view")]
-            ToolbarButton::GlobeView => {
-                let mut camera_3d = world
-                    .query_filtered::<&mut Camera, (With<Camera3d>, Without<Camera2d>)>()
-                    .single_mut(world);
-                camera_3d.is_active = !camera_3d.is_active;
-                let (mut camera_2d, mut pancam) = world
-                    .query_filtered::<(&mut Camera, &mut Pan2d), (With<Camera2d>, Without<Camera3d>)>()
-                    .single_mut(world);
-                camera_2d.is_active = !camera_2d.is_active;
-                pancam.enabled = camera_2d.is_active;
-            },
-        };
+                },
+                ToolbarButton::SaveWorld => {
+                    if let Err(err) = world_manager.save_world("planet.ron") {
+                        eprintln!("Failed to save planet.ron: {}", err);
+                    }
+                },
+                ToolbarButton::LoadWorld => {
+                    let mut images = world.resource_mut::<Assets<Image>>();
+                    if let Err(err) = world_manager.load_world("planet.ron", &mut images) {
+                        eprintln!("Failed to load planet.ron: {}", err);
+                    } else {
+                        update_textures(&world_manager, &mut images);
+                    }
+                },
+                ToolbarButton::Rainfall => {
+                    world_manager.toggle_rainfall();
+                    update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
+                },
+                ToolbarButton::Temperature => {
+                    world_manager.toggle_temperature();
+                    update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
+                },
+                ToolbarButton::PlanetView => {
+                    world_manager.cycle_view();
+                    update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
+                },
+                ToolbarButton::Contours => {
+                    world_manager.toggle_contours();
+                    update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
+                },
+                #[cfg(feature = "globe_view")]
+                ToolbarButton::GlobeView => {
+                    let mut camera_3d = world
+                        .query_filtered::<&mut Camera, (With<Camera3d>, Without<Camera2d>)>()
+                        .single_mut(world);
+                    camera_3d.is_active = !camera_3d.is_active;
+                    let (mut camera_2d, mut pancam) = world
+                        .query_filtered::<(&mut Camera, &mut Pan2d), (With<Camera2d>, Without<Camera3d>)>()
+                        .single_mut(world);
+                    camera_2d.is_active = !camera_2d.is_active;
+                    pancam.enabled = camera_2d.is_active;
+                },
+            };
+        });
     }
 }
 

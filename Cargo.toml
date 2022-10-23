@@ -8,6 +8,8 @@ resolver = "2"
 release = { strip = "symbols", lto = "thin", opt-level = "z" }
 
 [features]
+# bevy/trace_chrome for tracing by function
+# https://github.com/bevyengine/bevy/blob/main/docs/profiling.md
 logging = ["planet/logging"]
 globe_view = ["planet/globe_view", "render"]
 render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/x11", "bevy/wayland", "bevy/render", "planet/render", "dep:fxhash", "dep:bevy_egui"]
