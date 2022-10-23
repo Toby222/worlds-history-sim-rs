@@ -67,7 +67,7 @@ jobs:
 
       - name: Post-Build | Compress [Features; -nix]
         if: matrix.features != '' && !contains(matrix.os, 'windows')
-        uses: a7ul/tar-action@v1.1.0
+        uses: a7ul/tar-action@v1.1.2
         with:
           command: c
           cwd: ./target/${{ matrix.target }}/release/
@@ -75,7 +75,7 @@ jobs:
           outPath: worlds-history-sim-rs-${{ matrix.target }}-${{ matrix.features }}.tar.gz
       - name: Post-Build | Compress [Minimal; -nix]
         if: matrix.features == '' && !contains(matrix.os, 'windows')
-        uses: a7ul/tar-action@v1.1.0
+        uses: a7ul/tar-action@v1.1.2
         with:
           command: c
           cwd: ./target/${{ matrix.target }}/release/
@@ -84,7 +84,7 @@ jobs:
 
       - name: Post-Build | Compress [Features; Windows]
         if: matrix.features != '' && contains(matrix.os, 'windows')
-        uses: a7ul/tar-action@v1.1.0
+        uses: a7ul/tar-action@v1.1.2
         with:
           command: c
           cwd: ./target/${{ matrix.target }}/release/
@@ -92,7 +92,7 @@ jobs:
           outPath: worlds-history-sim-rs-${{ matrix.target }}-${{ matrix.features }}.tar.gz
       - name: Post-Build | Compress [Minimal; Windows]
         if: matrix.features == '' && contains(matrix.os, 'windows')
-        uses: a7ul/tar-action@v1.1.0
+        uses: a7ul/tar-action@v1.1.2
         with:
           command: c
           cwd: ./target/${{ matrix.target }}/release/
