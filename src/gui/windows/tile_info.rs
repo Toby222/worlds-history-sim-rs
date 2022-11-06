@@ -1,8 +1,5 @@
 use {
-    crate::{
-        gui::{WidgetId, WidgetSystem},
-        resources::CursorMapPosition,
-    },
+    crate::{gui::WindowSystem, resources::CursorMapPosition},
     bevy::ecs::{
         system::{SystemParam, SystemState},
         world::World,
@@ -13,15 +10,13 @@ use {
 };
 
 #[derive(SystemParam)]
-pub(crate) struct InfoPanel<'w, 's> {
+pub(crate) struct TileInfo<'w, 's> {
     #[system_param(ignore)]
     _phantom: PhantomData<(&'w (), &'s ())>,
 }
-impl WidgetSystem for InfoPanel<'_, '_> {
-    fn system(world: &mut World, _state: &mut SystemState<Self>, ui: &mut Ui, _id: WidgetId) {
-        // This will get everything our system/widget requested
-        // let mut params = state.get_mut(world);
 
+impl WindowSystem for TileInfo<'_, '_> {
+    fn draw_contents(world: &mut World, _state: &mut SystemState<Self>, ui: &mut Ui) {
         _ = Grid::new("info_panel")
             .num_columns(2)
             .striped(false)
@@ -67,5 +62,9 @@ impl WidgetSystem for InfoPanel<'_, '_> {
                     _ = ui.label("No tile at this position");
                 }
             });
+    }
+
+    fn name() -> &'static str {
+        "Tile Info"
     }
 }

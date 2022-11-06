@@ -3,6 +3,7 @@ pub(crate) mod components;
 pub(crate) mod gui;
 pub(crate) mod macros;
 pub(crate) mod plugins;
+#[cfg(feature = "render")]
 pub(crate) mod resources;
 
 #[cfg(all(feature = "render", feature = "logging"))]
@@ -52,11 +53,8 @@ use {
         EguiContext,
     },
     components::panning::Pan2d,
-    gui::{
-        widget,
-        widgets::{InfoPanel, ToolbarWidget},
-    },
-    resources::CursorMapPosition,
+    gui::{render_windows, widget, widgets::ToolbarWidget},
+    resources::{CursorMapPosition, OpenedWindows},
 };
 #[cfg(all(feature = "render", feature = "globe_view"))]
 use {
@@ -257,12 +255,6 @@ fn generate_graphics(
 fn update_gui(world: &mut World) {
     world.resource_scope(|world, mut ctx: Mut<'_, EguiContext>| {
         let ctx = ctx.ctx_mut();
-        _ = bevy_egui::egui::Window::new("Tile Info")
-            .resizable(false)
-            .show(ctx, |ui| {
-                widget::<InfoPanel<'_, '_>>(world, ui, "Tile Info Panel".into());
-            });
-
         #[cfg(feature = "logging")]
         {
             bevy_egui::egui::CentralPanel::default()
@@ -287,6 +279,8 @@ fn update_gui(world: &mut World) {
             .show(ctx, |ui| {
                 widget::<ToolbarWidget<'_, '_>>(world, ui, "Toolbar".into());
             });
+
+        render_windows(world, ctx);
     });
 }
 
@@ -310,6 +304,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ..default()
             })
             .insert_resource(CursorMapPosition::default())
+            .insert_resource(OpenedWindows::default())
             .add_startup_system(generate_graphics)
             .add_system(update_gui.exclusive_system())
             .add_system(update_cursor_map_position);

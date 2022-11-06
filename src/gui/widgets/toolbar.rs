@@ -9,8 +9,9 @@ use {
 };
 use {
     crate::{
-        gui::{WidgetId, WidgetSystem},
+        gui::{open_window, windows::Overlay, WidgetId, WidgetSystem},
         macros::iterable_enum,
+        resources::OpenedWindows,
     },
     bevy::{
         asset::Assets,
@@ -35,7 +36,8 @@ iterable_enum!(ToolbarButton {
     LoadWorld,
     Rainfall,
     Temperature,
-    PlanetView,
+    Overlays,
+    ToggleBiomes,
     Contours,
 });
 #[cfg(feature = "globe_view")]
@@ -45,7 +47,8 @@ iterable_enum!(ToolbarButton {
     LoadWorld,
     Rainfall,
     Temperature,
-    PlanetView,
+    Overlays,
+    ToggleBiomes,
     Contours,
     GlobeView,
 });
@@ -98,7 +101,10 @@ impl ToolbarButton {
                     world_manager.toggle_temperature();
                     update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
                 },
-                ToolbarButton::PlanetView => {
+                ToolbarButton::Overlays => {
+                    open_window::<Overlay>(&mut world.resource_mut::<OpenedWindows>());
+                },
+                ToolbarButton::ToggleBiomes => {
                     world_manager.cycle_view();
                     update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
                 },
@@ -129,7 +135,8 @@ impl From<ToolbarButton> for &'static str {
             ToolbarButton::Rainfall => "Toggle rainfall",
             ToolbarButton::Temperature => "Toggle temperature",
             ToolbarButton::Contours => "Toggle contours",
-            ToolbarButton::PlanetView => "Cycle view",
+            ToolbarButton::Overlays => "Overlays",
+            ToolbarButton::ToggleBiomes => "Toggle biome view",
             ToolbarButton::GenerateWorld => "Generate new world",
             ToolbarButton::SaveWorld => "Save",
             ToolbarButton::LoadWorld => "Load",
