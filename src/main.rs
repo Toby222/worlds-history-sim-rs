@@ -67,6 +67,7 @@ use {
         prelude::{Quat, Vec3},
         render::camera::OrthographicProjection,
         render::mesh::{shape::UVSphere, Mesh},
+        time::Time,
         transform::components::Transform,
     },
     std::f32::consts::FRAC_PI_2,
@@ -105,10 +106,15 @@ fn update_cursor_map_position(
 }
 
 #[cfg(all(feature = "render", feature = "globe_view"))]
-const ROTATION_SPEED: f32 = 0.002;
+const GLOBE_ROTATIONS_PER_SECOND: f32 = std::f32::consts::TAU / 15.0;
 #[cfg(all(feature = "render", feature = "globe_view"))]
-fn rotate_globe(mut globe_transform: Query<'_, '_, &mut Transform, With<Handle<Mesh>>>) {
-    globe_transform.single_mut().rotate_y(ROTATION_SPEED);
+fn rotate_globe(
+    mut globe_transform: Query<'_, '_, &mut Transform, With<Handle<Mesh>>>,
+    time: Res<Time>,
+) {
+    globe_transform
+        .single_mut()
+        .rotate_y(GLOBE_ROTATIONS_PER_SECOND * time.delta_seconds());
 }
 
 #[cfg(feature = "render")]
