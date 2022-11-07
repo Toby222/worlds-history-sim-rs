@@ -91,47 +91,79 @@ impl Display for SaveError {
 
 iterable_enum!(PlanetView { Biomes, Altitude });
 
-#[derive(Debug)]
+#[cfg(feature = "render")]
+#[derive(Debug, Default)]
+pub struct WorldRenderSettings {
+    pub map_image_handle_id:      Option<HandleId>,
+    #[cfg(feature = "globe_view")]
+    pub globe_image_handle_id:    Option<HandleId>,
+    #[cfg(feature = "globe_view")]
+    pub globe_material_handle_id: Option<HandleId>,
+
+    rainfall_visible:    bool,
+    temperature_visible: bool,
+    view:                PlanetView,
+}
+
+#[cfg(feature = "render")]
+impl WorldRenderSettings {
+    #[cfg(feature = "render")]
+    pub fn toggle_rainfall(&mut self) {
+        #[cfg(feature = "logging")]
+        if self.rainfall_visible {
+            debug!("Turning rainfall off");
+        } else {
+            debug!("Turning rainfall on");
+        }
+        self.rainfall_visible = !self.rainfall_visible;
+    }
+
+    #[cfg(feature = "render")]
+    pub fn toggle_temperature(&mut self) {
+        #[cfg(feature = "logging")]
+        if self.temperature_visible {
+            debug!("Turning temperature off");
+        } else {
+            debug!("Turning temperature on");
+        }
+        self.temperature_visible = !self.temperature_visible;
+    }
+
+    #[cfg(feature = "render")]
+    pub fn cycle_view(&mut self) {
+        let idx = (PlanetView::iterator()
+            .position(|view| *view == self.view)
+            .unwrap()
+            + 1)
+            % PlanetView::ITEM_COUNT;
+        #[cfg(feature = "logging")]
+        debug!(
+            "Cycling view from {:#?} to {:#?}",
+            self.view,
+            PlanetView::ITEMS[idx]
+        );
+        self.view = PlanetView::ITEMS[idx];
+    }
+}
+
+impl Default for PlanetView {
+    fn default() -> Self {
+        PlanetView::Biomes
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct WorldManager {
     world: Option<World>,
 
     #[cfg(feature = "render")]
-    pub map_image_handle_id:      Option<HandleId>,
-    #[cfg(all(feature = "render", feature = "globe_view"))]
-    pub globe_image_handle_id:    Option<HandleId>,
-    #[cfg(all(feature = "render", feature = "globe_view"))]
-    pub globe_material_handle_id: Option<HandleId>,
-
-    #[cfg(feature = "render")]
-    rainfall_visible:    bool,
-    #[cfg(feature = "render")]
-    temperature_visible: bool,
-    #[cfg(feature = "render")]
-    contours:            bool,
-    #[cfg(feature = "render")]
-    view:                PlanetView,
+    pub render_settings: WorldRenderSettings,
 }
 
 impl WorldManager {
     #[must_use]
     pub fn new() -> WorldManager {
-        Self {
-            world: None,
-            #[cfg(feature = "render")]
-            map_image_handle_id: None,
-            #[cfg(all(feature = "render", feature = "globe_view"))]
-            globe_image_handle_id: None,
-            #[cfg(all(feature = "render", feature = "globe_view"))]
-            globe_material_handle_id: None,
-            #[cfg(feature = "render")]
-            rainfall_visible: false,
-            #[cfg(feature = "render")]
-            temperature_visible: false,
-            #[cfg(feature = "render")]
-            view: PlanetView::Biomes,
-            #[cfg(feature = "render")]
-            contours: false,
-        }
+        default()
     }
 
     pub fn save_world<P: AsRef<Path>>(&self, path: P) -> Result<(), SaveError> {
@@ -190,7 +222,8 @@ impl WorldManager {
                 #[cfg(feature = "render")]
                 {
                     let image_handle = &images.get_handle(
-                        self.map_image_handle_id
+                        self.render_settings
+                            .map_image_handle_id
                             .expect("Missing image handle, even though world is present"),
                     );
                     images
@@ -208,54 +241,16 @@ impl WorldManager {
         }
     }
 
-    #[cfg(feature = "render")]
-    pub fn toggle_rainfall(&mut self) {
-        #[cfg(feature = "logging")]
-        if self.rainfall_visible {
-            debug!("Turning rainfall off");
-        } else {
-            debug!("Turning rainfall on");
-        }
-        self.rainfall_visible = !self.rainfall_visible;
-    }
-
-    #[cfg(feature = "render")]
-    pub fn toggle_temperature(&mut self) {
-        #[cfg(feature = "logging")]
-        if self.temperature_visible {
-            debug!("Turning temperature off");
-        } else {
-            debug!("Turning temperature on");
-        }
-        self.temperature_visible = !self.temperature_visible;
-    }
-
-    #[cfg(feature = "render")]
-    pub fn cycle_view(&mut self) {
-        let idx = (PlanetView::iterator()
-            .position(|view| *view == self.view)
-            .unwrap()
-            + 1)
-            % PlanetView::ITEM_COUNT;
-        #[cfg(feature = "logging")]
-        debug!(
-            "Cycling view from {:#?} to {:#?}",
-            self.view,
-            PlanetView::ITEMS[idx]
-        );
-        self.view = PlanetView::ITEMS[idx];
-    }
-
-    #[cfg(feature = "render")]
-    pub fn toggle_contours(&mut self) {
-        #[cfg(feature = "logging")]
-        if self.contours {
-            debug!("Turning terrain contours off");
-        } else {
-            debug!("Turning terrain contours on");
-        }
-        self.contours = !self.contours;
-    }
+    // #[cfg(feature = "render")]
+    // pub fn toggle_contours(&mut self) {
+    //     #[cfg(feature = "logging")]
+    //     if self.contours {
+    //         debug!("Turning terrain contours off");
+    //     } else {
+    //         debug!("Turning terrain contours on");
+    //     }
+    //     self.contours = !self.contours;
+    // }
 
     #[must_use]
     pub fn get_world(&self) -> Option<&World> {
@@ -278,15 +273,16 @@ impl WorldManager {
     #[cfg(feature = "render")]
     #[must_use]
     fn generate_color(&self, cell: &TerrainCell) -> Color {
-        if self.view == PlanetView::Biomes {
+        if self.render_settings.view == PlanetView::Biomes {
             return WorldManager::biome_color(cell);
         }
 
-        let altitude_color = if self.contours {
-            WorldManager::altitude_contour_color(cell.altitude)
-        } else {
-            WorldManager::altitude_color(cell.altitude)
-        };
+        let altitude_color = WorldManager::altitude_contour_color(cell.altitude);
+        // let altitude_color = if self.contours {
+        //     WorldManager::altitude_contour_color(cell.altitude)
+        // } else {
+        //     WorldManager::altitude_color(cell.altitude)
+        // };
 
         let mut layer_count = 1.0;
 
@@ -294,7 +290,7 @@ impl WorldManager {
         let mut green = altitude_color.g();
         let mut blue = altitude_color.b();
 
-        if self.rainfall_visible {
+        if self.render_settings.rainfall_visible {
             layer_count += 1.0;
             let rainfall_color = self.rainfall_contour_color(cell.rainfall);
             // if self.contours {
@@ -308,7 +304,7 @@ impl WorldManager {
             blue += rainfall_color.b();
         }
 
-        if self.temperature_visible {
+        if self.render_settings.temperature_visible {
             layer_count += 1.0;
             let temperature_color = self.temperature_contour_color(cell.temperature);
             // if self.contours {
@@ -325,17 +321,17 @@ impl WorldManager {
         Color::rgb(red / layer_count, green / layer_count, blue / layer_count)
     }
 
-    #[cfg(feature = "render")]
-    #[must_use]
-    fn altitude_color(altitude: f32) -> Color {
-        if altitude < 0.0 {
-            Color::rgb(0.0, 0.0, (2.0 - altitude / World::MIN_ALTITUDE) / 2.0)
-        } else {
-            let mult = (1.0 + altitude / World::MAX_ALTITUDE) / 2.0;
+    // #[cfg(feature = "render")]
+    // #[must_use]
+    // fn altitude_color(altitude: f32) -> Color {
+    //     if altitude < 0.0 {
+    //         Color::rgb(0.0, 0.0, (2.0 - altitude / World::MIN_ALTITUDE) / 2.0)
+    //     } else {
+    //         let mult = (1.0 + altitude / World::MAX_ALTITUDE) / 2.0;
 
-            Color::rgb(0.58 * mult, 0.29 * mult, 0.0)
-        }
-    }
+    //         Color::rgb(0.58 * mult, 0.29 * mult, 0.0)
+    //     }
+    // }
 
     #[cfg(feature = "render")]
     #[must_use]

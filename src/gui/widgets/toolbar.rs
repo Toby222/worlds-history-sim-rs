@@ -9,7 +9,7 @@ use {
 };
 use {
     crate::{
-        gui::{open_window, windows::Overlay, WidgetId, WidgetSystem},
+        gui::{open_window, update_textures, windows::Overlay, WidgetId, WidgetSystem},
         macros::iterable_enum,
         resources::OpenedWindows,
     },
@@ -22,7 +22,7 @@ use {
             world::World,
         },
         log::debug,
-        render::{render_resource::Extent3d, texture::Image},
+        render::texture::Image,
     },
     bevy_egui::egui::{Layout, Ui},
     planet::WorldManager,
@@ -34,41 +34,19 @@ iterable_enum!(ToolbarButton {
     GenerateWorld,
     SaveWorld,
     LoadWorld,
-    Rainfall,
-    Temperature,
     Overlays,
     ToggleBiomes,
-    Contours,
 });
 #[cfg(feature = "globe_view")]
 iterable_enum!(ToolbarButton {
     GenerateWorld,
     SaveWorld,
     LoadWorld,
-    Rainfall,
-    Temperature,
     Overlays,
     ToggleBiomes,
-    Contours,
     GlobeView,
 });
-fn update_textures(world_manager: &WorldManager, images: &mut Mut<Assets<Image>>) {
-    debug!("refreshing world texture");
-    let map_image_handle = images.get_handle(
-        world_manager
-            .map_image_handle_id
-            .expect("No map image handle"),
-    );
-    let map_image = images
-        .get_mut(&map_image_handle)
-        .expect("Map image handle pointing to non-existing image");
-    map_image.resize(Extent3d {
-        width:                 world_manager.world().width,
-        height:                world_manager.world().height,
-        depth_or_array_layers: 1,
-    });
-    map_image.data = world_manager.map_color_bytes();
-}
+
 impl ToolbarButton {
     fn clicked(self, world: &mut World) {
         world.resource_scope(|world, mut world_manager: Mut<'_, WorldManager>| {
@@ -93,23 +71,11 @@ impl ToolbarButton {
                         update_textures(&world_manager, &mut images);
                     }
                 },
-                ToolbarButton::Rainfall => {
-                    world_manager.toggle_rainfall();
-                    update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
-                },
-                ToolbarButton::Temperature => {
-                    world_manager.toggle_temperature();
-                    update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
-                },
                 ToolbarButton::Overlays => {
                     open_window::<Overlay>(&mut world.resource_mut::<OpenedWindows>());
                 },
                 ToolbarButton::ToggleBiomes => {
-                    world_manager.cycle_view();
-                    update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
-                },
-                ToolbarButton::Contours => {
-                    world_manager.toggle_contours();
+                    world_manager.render_settings.cycle_view();
                     update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
                 },
                 #[cfg(feature = "globe_view")]
@@ -132,9 +98,6 @@ impl ToolbarButton {
 impl From<ToolbarButton> for &'static str {
     fn from(button: ToolbarButton) -> Self {
         match button {
-            ToolbarButton::Rainfall => "Toggle rainfall",
-            ToolbarButton::Temperature => "Toggle temperature",
-            ToolbarButton::Contours => "Toggle contours",
             ToolbarButton::Overlays => "Overlays",
             ToolbarButton::ToggleBiomes => "Toggle biome view",
             ToolbarButton::GenerateWorld => "Generate new world",

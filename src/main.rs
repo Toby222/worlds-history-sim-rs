@@ -31,6 +31,7 @@ use {
             system::{Commands, IntoExclusiveSystem, Query, Res},
             world::World,
         },
+        input::{keyboard::KeyCode, Input},
         prelude::Vec2,
         render::{
             camera::{Camera, RenderTarget},
@@ -53,7 +54,7 @@ use {
         EguiContext,
     },
     components::panning::Pan2d,
-    gui::{render_windows, widget, widgets::ToolbarWidget},
+    gui::{render_windows, widget, widgets::ToolbarWidget, window::open_window, windows::TileInfo},
     resources::{CursorMapPosition, OpenedWindows},
 };
 #[cfg(all(feature = "render", feature = "globe_view"))]
@@ -170,14 +171,14 @@ fn generate_graphics(
             },
             ..default()
         });
-        world_manager.map_image_handle_id = Some(map_image_handle.id);
+        world_manager.render_settings.map_image_handle_id = Some(map_image_handle.id);
         _ = commands
             .spawn_bundle(Camera2dBundle::default())
             .insert(Pan2d::new());
 
         // TODO: Switch to egui
         _ = commands.spawn_bundle(SpriteBundle {
-            texture: images.get_handle(world_manager.map_image_handle_id.unwrap()),
+            texture: images.get_handle(world_manager.render_settings.map_image_handle_id.unwrap()),
             sprite: Sprite {
                 custom_size: Some(custom_sprite_size),
                 ..default()
@@ -206,7 +207,7 @@ fn generate_graphics(
             },
             ..default()
         });
-        world_manager.globe_image_handle_id = Some(globe_image_handle.id);
+        world_manager.render_settings.globe_image_handle_id = Some(globe_image_handle.id);
 
         _ = commands.spawn_bundle(Camera3dBundle {
             camera: Camera {
@@ -224,10 +225,10 @@ fn generate_graphics(
 
         let globe_material_handle = materials.add(
             images
-                .get_handle(world_manager.globe_image_handle_id.unwrap())
+                .get_handle(world_manager.render_settings.globe_image_handle_id.unwrap())
                 .into(),
         );
-        world_manager.globe_material_handle_id = Some(globe_material_handle.id);
+        world_manager.render_settings.globe_material_handle_id = Some(globe_material_handle.id);
 
         // TODO: Globe texture is mirrored east-to-west.
         _ = commands.spawn_bundle(PbrBundle {
@@ -248,6 +249,13 @@ fn generate_graphics(
             },
             ..default()
         });
+    }
+}
+
+#[cfg(feature = "render")]
+fn open_tile_info(mut windows: ResMut<OpenedWindows>, keys: Res<Input<KeyCode>>) {
+    if keys.just_released(KeyCode::I) {
+        open_window::<TileInfo>(&mut windows);
     }
 }
 
@@ -307,7 +315,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .insert_resource(OpenedWindows::default())
             .add_startup_system(generate_graphics)
             .add_system(update_gui.exclusive_system())
-            .add_system(update_cursor_map_position);
+            .add_system(update_cursor_map_position)
+            .add_system(open_tile_info);
         #[cfg(all(feature = "render", feature = "globe_view"))]
         {
             _ = app.add_system(rotate_globe);
