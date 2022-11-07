@@ -14,7 +14,7 @@ use {
 };
 
 pub(crate) trait WidgetSystem: SystemParam {
-    fn system(world: &mut World, state: &mut SystemState<Self>, ui: &mut Ui, id: WidgetId);
+    fn render(world: &mut World, state: &mut SystemState<Self>, ui: &mut Ui, id: WidgetId);
 }
 
 pub(crate) fn widget<S: 'static + WidgetSystem>(world: &mut World, ui: &mut Ui, id: WidgetId) {
@@ -36,7 +36,7 @@ pub(crate) fn widget<S: 'static + WidgetSystem>(world: &mut World, ui: &mut Ui, 
             _ = states.instances.insert(id, SystemState::new(world));
         }
         let cached_state = states.instances.get_mut(&id).unwrap();
-        S::system(world, cached_state, ui, id);
+        S::render(world, cached_state, ui, id);
         cached_state.apply(world);
     });
 }

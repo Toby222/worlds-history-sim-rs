@@ -170,7 +170,7 @@ pub(crate) struct ToolbarWidget<'w, 's> {
     _phantom: PhantomData<(&'w (), &'s ())>,
 }
 impl WidgetSystem for ToolbarWidget<'_, '_> {
-    fn system(world: &mut World, _state: &mut SystemState<Self>, ui: &mut Ui, _id: WidgetId) {
+    fn render(world: &mut World, _state: &mut SystemState<Self>, ui: &mut Ui, _id: WidgetId) {
         ui.with_layout(
             Layout::left_to_right(bevy_egui::egui::Align::Center),
             |ui| {
