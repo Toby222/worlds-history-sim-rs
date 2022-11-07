@@ -12,18 +12,6 @@ jobs:
         include:
           - target: x86_64-apple-darwin
             os: macos-latest
-            features: globe_view
-          - target: aarch64-apple-darwin
-            os: macos-latest
-            features: globe_view
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            features: globe_view
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            features: globe_view
-          - target: x86_64-apple-darwin
-            os: macos-latest
             features: render
           - target: aarch64-apple-darwin
             os: macos-latest
@@ -46,6 +34,30 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             features: ""
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            features: render,logging
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            features: render,logging
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            features: render,logging
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            features: render,logging
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            features: logging
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            features: logging
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            features: logging
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            features: logging
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout

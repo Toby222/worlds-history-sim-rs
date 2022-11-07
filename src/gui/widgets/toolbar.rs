@@ -1,12 +1,3 @@
-#[cfg(feature = "globe_view")]
-use {
-    crate::components::panning::Pan2d,
-    bevy::{
-        core_pipeline::{core_2d::Camera2d, core_3d::Camera3d},
-        ecs::query::{With, Without},
-        render::camera::Camera,
-    },
-};
 use {
     crate::{
         gui::{open_window, update_textures, windows::Overlay, WidgetId, WidgetSystem},
@@ -29,22 +20,12 @@ use {
     std::marker::PhantomData,
 };
 
-#[cfg(not(feature = "globe_view"))]
 iterable_enum!(ToolbarButton {
     GenerateWorld,
     SaveWorld,
     LoadWorld,
     Overlays,
     ToggleBiomes,
-});
-#[cfg(feature = "globe_view")]
-iterable_enum!(ToolbarButton {
-    GenerateWorld,
-    SaveWorld,
-    LoadWorld,
-    Overlays,
-    ToggleBiomes,
-    GlobeView,
 });
 
 impl ToolbarButton {
@@ -78,18 +59,6 @@ impl ToolbarButton {
                     world_manager.render_settings.cycle_view();
                     update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
                 },
-                #[cfg(feature = "globe_view")]
-                ToolbarButton::GlobeView => {
-                    let mut camera_3d = world
-                        .query_filtered::<&mut Camera, (With<Camera3d>, Without<Camera2d>)>()
-                        .single_mut(world);
-                    camera_3d.is_active = !camera_3d.is_active;
-                    let (mut camera_2d, mut pancam) = world
-                        .query_filtered::<(&mut Camera, &mut Pan2d), (With<Camera2d>, Without<Camera3d>)>()
-                        .single_mut(world);
-                    camera_2d.is_active = !camera_2d.is_active;
-                    pancam.enabled = camera_2d.is_active;
-                },
             };
         });
     }
@@ -103,8 +72,6 @@ impl From<ToolbarButton> for &'static str {
             ToolbarButton::GenerateWorld => "Generate new world",
             ToolbarButton::SaveWorld => "Save",
             ToolbarButton::LoadWorld => "Load",
-            #[cfg(feature = "globe_view")]
-            ToolbarButton::GlobeView => "Toggle globe",
         }
     }
 }

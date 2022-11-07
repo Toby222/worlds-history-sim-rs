@@ -1,12 +1,8 @@
 #[cfg(all(feature = "logging", feature = "render"))]
 use bevy::log::debug;
-#[cfg(feature = "logging")]
-use bevy::utils::default;
-#[cfg(all(feature = "render", feature = "globe_view"))]
-use std::f32::consts::PI;
 use {
     crate::{macros::iterable_enum, World, WorldGenError},
-    bevy::log::warn,
+    bevy::{log::warn, utils::default},
     rand::random,
     std::{
         error::Error,
@@ -94,11 +90,7 @@ iterable_enum!(PlanetView { Biomes, Altitude });
 #[cfg(feature = "render")]
 #[derive(Debug, Default)]
 pub struct WorldRenderSettings {
-    pub map_image_handle_id:      Option<HandleId>,
-    #[cfg(feature = "globe_view")]
-    pub globe_image_handle_id:    Option<HandleId>,
-    #[cfg(feature = "globe_view")]
-    pub globe_material_handle_id: Option<HandleId>,
+    pub map_image_handle_id: Option<HandleId>,
 
     rainfall_visible:    bool,
     temperature_visible: bool,
@@ -415,48 +407,6 @@ impl WorldManager {
             .flatten()
             .flat_map(|cell| {
                 self.generate_color(cell)
-                    .as_rgba_f32()
-                    .iter()
-                    .flat_map(|num| num.to_le_bytes())
-                    .collect::<Vec<u8>>()
-            })
-            .collect()
-    }
-
-    #[cfg(all(feature = "render", feature = "globe_view"))]
-    #[must_use]
-    fn globe_colors(&self) -> Vec<Color> {
-        let world = self.world();
-        let width = world.width as usize;
-        let height = world.height as usize;
-
-        let mut colors = vec![Color::PINK; height * width];
-
-        for y in 0..world.height as usize * 2 {
-            for x in 0..world.width as usize {
-                let factor_y = (1.0 - f32::cos(PI * y as f32 / (world.height * 2) as f32)) / 2.0;
-                let real_y = f32::floor(world.height as f32 * factor_y) as usize;
-                #[cfg(feature = "logging")]
-                assert!(
-                    real_y < world.height as usize,
-                    "Trying to get cell off of planet. {}/{}",
-                    real_y,
-                    world.height
-                );
-
-                colors[real_y * width + x] = self.generate_color(&world.terrain[real_y][x]);
-            }
-        }
-        colors
-    }
-
-    #[cfg(all(feature = "render", feature = "globe_view"))]
-    #[must_use]
-    pub fn globe_color_bytes(&self) -> Vec<u8> {
-        self.globe_colors()
-            .iter()
-            .flat_map(|color| {
-                color
                     .as_rgba_f32()
                     .iter()
                     .flat_map(|num| num.to_le_bytes())

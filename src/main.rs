@@ -57,20 +57,6 @@ use {
     gui::{render_windows, widget, widgets::ToolbarWidget, window::open_window, windows::TileInfo},
     resources::{CursorMapPosition, OpenedWindows},
 };
-#[cfg(all(feature = "render", feature = "globe_view"))]
-use {
-    bevy::{
-        asset::Handle,
-        core_pipeline::core_3d::Camera3dBundle,
-        pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
-        prelude::{Quat, Vec3},
-        render::camera::OrthographicProjection,
-        render::mesh::{shape::UVSphere, Mesh},
-        time::Time,
-        transform::components::Transform,
-    },
-    std::f32::consts::FRAC_PI_2,
-};
 
 #[cfg(feature = "render")]
 fn update_cursor_map_position(
@@ -104,26 +90,12 @@ fn update_cursor_map_position(
     }
 }
 
-#[cfg(all(feature = "render", feature = "globe_view"))]
-const GLOBE_ROTATIONS_PER_SECOND: f32 = std::f32::consts::TAU / 15.0;
-#[cfg(all(feature = "render", feature = "globe_view"))]
-fn rotate_globe(
-    mut globe_transform: Query<'_, '_, &mut Transform, With<Handle<Mesh>>>,
-    time: Res<Time>,
-) {
-    globe_transform
-        .single_mut()
-        .rotate_y(GLOBE_ROTATIONS_PER_SECOND * time.delta_seconds());
-}
-
 #[cfg(feature = "render")]
 fn generate_graphics(
     mut commands: Commands<'_, '_>,
     mut world_manager: ResMut<'_, WorldManager>,
     mut images: ResMut<'_, Assets<Image>>,
     mut egui_context: ResMut<'_, EguiContext>,
-    #[cfg(feature = "globe_view")] mut materials: ResMut<'_, Assets<StandardMaterial>>,
-    #[cfg(feature = "globe_view")] mut meshes: ResMut<'_, Assets<Mesh>>,
 ) {
     // Add Julia-Mono font to egui
     {
@@ -187,69 +159,6 @@ fn generate_graphics(
         });
     }
 
-    #[cfg(feature = "globe_view")]
-    {
-        let world = world_manager.world();
-        let globe_image_handle = images.add(Image {
-            data: world_manager.globe_color_bytes(),
-            texture_descriptor: TextureDescriptor {
-                label:           None,
-                size:            Extent3d {
-                    width: world.width,
-                    height: world.height,
-                    ..default()
-                },
-                dimension:       TextureDimension::D2,
-                format:          TextureFormat::Rgba32Float,
-                mip_level_count: 1,
-                sample_count:    1,
-                usage:           TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING,
-            },
-            ..default()
-        });
-        world_manager.render_settings.globe_image_handle_id = Some(globe_image_handle.id);
-
-        _ = commands.spawn_bundle(Camera3dBundle {
-            camera: Camera {
-                is_active: false,
-                ..default()
-            },
-            transform: Transform::from_xyz(0.0, 0.0, 8.0).looking_at(default(), Vec3::Y),
-            projection: OrthographicProjection {
-                scale: 0.01,
-                ..default()
-            }
-            .into(),
-            ..default()
-        });
-
-        let globe_material_handle = materials.add(
-            images
-                .get_handle(world_manager.render_settings.globe_image_handle_id.unwrap())
-                .into(),
-        );
-        world_manager.render_settings.globe_material_handle_id = Some(globe_material_handle.id);
-
-        // TODO: Globe texture is mirrored east-to-west.
-        _ = commands.spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(UVSphere {
-                radius: 2.0,
-                ..default()
-            })),
-            material: globe_material_handle,
-            transform: Transform::from_rotation(Quat::from_rotation_x(FRAC_PI_2)),
-            ..default()
-        });
-        _ = commands.spawn_bundle(PointLightBundle {
-            transform: Transform::from_xyz(-20.0, 0.0, 50.0),
-            point_light: PointLight {
-                intensity: 600000.,
-                range: 100.,
-                ..default()
-            },
-            ..default()
-        });
-    }
 }
 
 #[cfg(feature = "render")]
@@ -317,10 +226,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .add_system(update_gui.exclusive_system())
             .add_system(update_cursor_map_position)
             .add_system(open_tile_info);
-        #[cfg(all(feature = "render", feature = "globe_view"))]
-        {
-            _ = app.add_system(rotate_globe);
-        }
     }
     #[cfg(not(feature = "render"))]
     {

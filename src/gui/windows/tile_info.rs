@@ -42,13 +42,13 @@ impl WindowSystem for TileInfo<'_, '_> {
                     } = &world_manager.world().terrain[cursor_y as usize][cursor_x as usize];
 
                     _ = ui.label("Altitude");
-                    _ = ui.label(format!("{:.2}", altitude));
+                    _ = ui.label(format!("{altitude:.2}"));
                     ui.end_row();
                     _ = ui.label("Rainfall");
-                    _ = ui.label(format!("{:.2}", rainfall));
+                    _ = ui.label(format!("{rainfall:.2}"));
                     ui.end_row();
                     _ = ui.label("Temperature");
-                    _ = ui.label(format!("{:.2}", temperature));
+                    _ = ui.label(format!("{temperature:.2}"));
 
                     ui.end_row();
                     ui.end_row();

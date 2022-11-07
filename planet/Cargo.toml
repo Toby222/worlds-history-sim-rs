@@ -8,9 +8,8 @@ release = { strip = "symbols", lto = "thin", opt-level = "z" }
 
 [features]
 logging = []
-globe_view = ["render"]
 render = ["bevy/render"]
-default = ["render", "logging", "globe_view"]
+default = ["render", "logging"]
 
 [dependencies.rand]
 version = "0.8.5"

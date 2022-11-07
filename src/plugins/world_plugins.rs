@@ -47,11 +47,6 @@ impl PluginGroup for WorldPlugins {
                 .add(UiPlugin)
                 .add(PanningPlugin)
                 .add(EguiPlugin);
-            #[cfg(feature = "globe_view")]
-            {
-                use bevy::pbr::PbrPlugin;
-                _ = group.add(PbrPlugin)
-            }
         }
         #[cfg(not(feature = "render"))]
         {
