@@ -30,7 +30,7 @@ impl WindowSystem for TileInfo<'_, '_> {
 
                 let world_manager = world.resource::<WorldManager>();
                 if cursor_x >= 0
-                    && cursor_x <= world_manager.world().width.try_into().unwrap()
+                    && cursor_x < world_manager.world().width.try_into().unwrap()
                     && cursor_y >= 0
                     && cursor_y < world_manager.world().height.try_into().unwrap()
                 {
