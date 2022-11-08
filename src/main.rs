@@ -8,11 +8,6 @@ pub(crate) mod plugins;
 #[cfg(feature = "render")]
 pub(crate) mod resources;
 
-#[cfg(all(feature = "render", feature = "logging"))]
-use {
-    bevy::diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
-    bevy_egui::egui::Frame,
-};
 use {
     bevy::{
         app::App,
@@ -37,7 +32,13 @@ use {
         prelude::Vec2,
         render::{
             camera::{Camera, RenderTarget},
-            render_resource::{TextureDescriptor, TextureDimension, TextureFormat, TextureUsages},
+            render_resource::{
+                Extent3d,
+                TextureDescriptor,
+                TextureDimension,
+                TextureFormat,
+                TextureUsages,
+            },
             texture::{Image, ImageSettings},
         },
         sprite::{Sprite, SpriteBundle},
@@ -50,16 +51,17 @@ use {
         EguiContext,
     },
     components::panning::Pan2d,
-    gui::{
-        render_windows,
-        update_textures,
-        widget,
-        widgets::ToolbarWidget,
-        window::open_window,
-        windows::TileInfo,
-    },
+    gui::{render_windows, widget, widgets::ToolbarWidget, window::open_window, windows::TileInfo},
     planet::WorldRenderSettings,
-    resources::{CursorMapPosition, OpenedWindows},
+    resources::{CursorMapPosition, OpenedWindows, ShouldRedraw},
+};
+#[cfg(all(feature = "render", feature = "logging"))]
+use {
+    bevy::{
+        diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
+        log::debug,
+    },
+    bevy_egui::egui::Frame,
 };
 
 #[cfg(feature = "render")]
@@ -159,8 +161,6 @@ fn generate_graphics(
             ..default()
         });
     }
-
-    update_textures(&world_manager, &render_settings, &mut images);
 }
 
 #[cfg(feature = "render")]
@@ -204,6 +204,38 @@ fn update_gui(world: &mut World) {
 }
 
 #[cfg(feature = "render")]
+fn redraw_map(
+    mut should_redraw: ResMut<ShouldRedraw>,
+    world_manager: Res<WorldManager>,
+    render_settings: Res<'_, WorldRenderSettings>,
+    mut images: ResMut<Assets<Image>>,
+) {
+    if should_redraw.0 {
+        let world_manager: &WorldManager = &world_manager;
+        let render_settings: &WorldRenderSettings = &render_settings;
+        let images: &mut Assets<Image> = &mut images;
+        #[cfg(feature = "logging")]
+        debug!("refreshing world texture");
+        let map_image_handle = images.get_handle(
+            render_settings
+                .map_image_handle_id
+                .expect("No map image handle"),
+        );
+        let map_image = images
+            .get_mut(&map_image_handle)
+            .expect("Map image handle pointing to non-existing image");
+        map_image.resize(Extent3d {
+            width:                 world_manager.world().width,
+            height:                world_manager.world().height,
+            depth_or_array_layers: 1,
+        });
+        map_image.data = world_manager.map_color_bytes(render_settings);
+
+        should_redraw.0 = false;
+    }
+}
+
+#[cfg(feature = "render")]
 const WORLD_SCALE: i32 = 4;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new();
@@ -225,10 +257,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .insert_resource(CursorMapPosition::default())
             .insert_resource(OpenedWindows::default())
             .insert_resource(WorldRenderSettings::default())
+            .insert_resource(ShouldRedraw::default())
             .add_startup_system(generate_graphics)
             .add_system(update_gui.exclusive_system())
             .add_system(update_cursor_map_position)
-            .add_system(open_tile_info);
+            .add_system(open_tile_info)
+            .add_system(redraw_map);
     }
     #[cfg(not(feature = "render"))]
     {

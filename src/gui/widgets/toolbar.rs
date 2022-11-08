@@ -2,16 +2,14 @@ use {
     crate::{
         gui::{
             open_window,
-            update_textures,
             windows::{SaveLoad, WorldOverlaySelection, WorldViewSelection},
             WidgetId,
             WidgetSystem,
         },
         macros::iterable_enum,
-        resources::OpenedWindows,
+        resources::{OpenedWindows, ShouldRedraw},
     },
     bevy::{
-        asset::Assets,
         ecs::{
             change_detection::Mut,
             component::Component,
@@ -19,10 +17,9 @@ use {
             world::World,
         },
         log::debug,
-        render::texture::Image,
     },
     bevy_egui::egui::{Layout, Ui},
-    planet::{WorldManager, WorldRenderSettings},
+    planet::WorldManager,
     std::marker::PhantomData,
 };
 
@@ -36,34 +33,26 @@ iterable_enum!(ToolbarButton {
 impl ToolbarButton {
     fn clicked(self, world: &mut World) {
         world.resource_scope(|world, mut world_manager: Mut<'_, WorldManager>| {
-            world.resource_scope(|world, render_settings: Mut<'_, WorldRenderSettings>| {
-                match self {
-                    ToolbarButton::GenerateWorld => {
-                        if let Err(err) = world_manager.new_world() {
-                            eprintln!("Failed to generate world: {}", err);
-                        } else {
-                            update_textures(
-                                &world_manager,
-                                &render_settings,
-                                &mut world.resource_mut::<Assets<Image>>(),
-                            );
-                        }
-                    },
-                    ToolbarButton::SaveLoad => {
-                        open_window::<SaveLoad>(&mut world.resource_mut::<OpenedWindows>());
-                    },
-                    ToolbarButton::Views => {
-                        open_window::<WorldViewSelection>(
-                            &mut world.resource_mut::<OpenedWindows>(),
-                        );
-                    },
-                    ToolbarButton::Overlays => {
-                        open_window::<WorldOverlaySelection>(
-                            &mut world.resource_mut::<OpenedWindows>(),
-                        );
-                    },
-                };
-            });
+            match self {
+                ToolbarButton::GenerateWorld => {
+                    if let Err(err) = world_manager.new_world() {
+                        eprintln!("Failed to generate world: {}", err);
+                    } else {
+                        world.resource_mut::<ShouldRedraw>().0 = true;
+                    }
+                },
+                ToolbarButton::SaveLoad => {
+                    open_window::<SaveLoad>(&mut world.resource_mut::<OpenedWindows>());
+                },
+                ToolbarButton::Views => {
+                    open_window::<WorldViewSelection>(&mut world.resource_mut::<OpenedWindows>());
+                },
+                ToolbarButton::Overlays => {
+                    open_window::<WorldOverlaySelection>(
+                        &mut world.resource_mut::<OpenedWindows>(),
+                    );
+                },
+            };
         });
     }
 }

@@ -11,6 +11,13 @@ impl Display for CursorMapPosition {
     }
 }
 
+pub(crate) struct ShouldRedraw(pub(crate) bool);
+impl Default for ShouldRedraw {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct OpenedWindows(HashSet<WindowId>);
 

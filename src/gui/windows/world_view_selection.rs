@@ -1,16 +1,12 @@
 use {
-    crate::gui::{update_textures, WindowSystem},
-    bevy::{
-        asset::Assets,
-        ecs::{
-            change_detection::Mut,
-            system::{SystemParam, SystemState},
-            world::World,
-        },
-        render::texture::Image,
+    crate::{gui::WindowSystem, resources::ShouldRedraw},
+    bevy::ecs::{
+        change_detection::Mut,
+        system::{SystemParam, SystemState},
+        world::World,
     },
     bevy_egui::egui::Ui,
-    planet::{WorldManager, WorldRenderSettings, WorldView},
+    planet::{WorldRenderSettings, WorldView},
     std::marker::PhantomData,
 };
 
@@ -32,13 +28,7 @@ impl WindowSystem for WorldViewSelection<'_, '_> {
                     && render_settings.view != view
                 {
                     render_settings.view = view;
-                    world.resource_scope(|world, mut images: Mut<Assets<Image>>| {
-                        update_textures(
-                            world.resource::<WorldManager>(),
-                            &render_settings,
-                            &mut images,
-                        );
-                    });
+                    world.resource_mut::<ShouldRedraw>().0 = true;
                 }
             }
         });

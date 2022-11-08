@@ -1,11 +1,7 @@
 #[cfg(feature = "render")]
 use {
     crate::{BiomeStats, TerrainCell, WorldOverlay, WorldRenderSettings, WorldView},
-    bevy::{
-        asset::Assets,
-        render::render_resource::Extent3d,
-        render::{color::Color, texture::Image},
-    },
+    bevy::render::color::Color,
 };
 use {
     crate::{World, WorldGenError},
@@ -124,12 +120,7 @@ impl WorldManager {
         }
     }
 
-    pub fn load_world<P: AsRef<Path>>(
-        &mut self,
-        path: P,
-        #[cfg(feature = "render")] render_settings: &WorldRenderSettings,
-        #[cfg(feature = "render")] images: &mut Assets<Image>,
-    ) -> Result<(), LoadError> {
+    pub fn load_world<P: AsRef<Path>>(&mut self, path: P) -> Result<(), LoadError> {
         let mut file = match File::open(path) {
             Ok(file) => file,
             Err(err) => {
@@ -145,25 +136,7 @@ impl WorldManager {
         };
         match ron::from_str(buf.as_str()) {
             Ok(world) => {
-                #[cfg(feature = "render")]
-                let World { height, width, .. } = world;
                 self.world = Some(world);
-                #[cfg(feature = "render")]
-                {
-                    let image_handle = &images.get_handle(
-                        render_settings
-                            .map_image_handle_id
-                            .expect("Missing image handle, even though world is present"),
-                    );
-                    images
-                        .get_mut(image_handle)
-                        .expect("Handle for missing image")
-                        .resize(Extent3d {
-                            width,
-                            height,
-                            depth_or_array_layers: 0,
-                        });
-                }
                 Ok(())
             },
             Err(err) => Err(LoadError::InvalidSave(err)),
