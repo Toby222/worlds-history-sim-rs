@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "logging"), windows_subsystem = "windows")]
+
 pub(crate) mod components;
 #[cfg(feature = "render")]
 pub(crate) mod gui;
@@ -35,13 +37,7 @@ use {
         prelude::Vec2,
         render::{
             camera::{Camera, RenderTarget},
-            render_resource::{
-                Extent3d,
-                TextureDescriptor,
-                TextureDimension,
-                TextureFormat,
-                TextureUsages,
-            },
+            render_resource::{TextureDescriptor, TextureDimension, TextureFormat, TextureUsages},
             texture::{Image, ImageSettings},
         },
         sprite::{Sprite, SpriteBundle},
@@ -54,7 +50,15 @@ use {
         EguiContext,
     },
     components::panning::Pan2d,
-    gui::{render_windows, widget, widgets::ToolbarWidget, window::open_window, windows::TileInfo},
+    gui::{
+        render_windows,
+        update_textures,
+        widget,
+        widgets::ToolbarWidget,
+        window::open_window,
+        windows::TileInfo,
+    },
+    planet::WorldRenderSettings,
     resources::{CursorMapPosition, OpenedWindows},
 };
 
@@ -93,9 +97,10 @@ fn update_cursor_map_position(
 #[cfg(feature = "render")]
 fn generate_graphics(
     mut commands: Commands<'_, '_>,
-    mut world_manager: ResMut<'_, WorldManager>,
+    world_manager: ResMut<'_, WorldManager>,
     mut images: ResMut<'_, Assets<Image>>,
     mut egui_context: ResMut<'_, EguiContext>,
+    mut render_settings: ResMut<'_, WorldRenderSettings>,
 ) {
     // Add Julia-Mono font to egui
     {
@@ -127,14 +132,10 @@ fn generate_graphics(
     // Set up 2D map mode
     {
         let map_image_handle = images.add(Image {
-            data: world_manager.map_color_bytes(),
+            data: vec![],
             texture_descriptor: TextureDescriptor {
                 label:           None,
-                size:            Extent3d {
-                    width: world.width,
-                    height: world.height,
-                    ..default()
-                },
+                size:            default(),
                 dimension:       TextureDimension::D2,
                 format:          TextureFormat::Rgba32Float,
                 mip_level_count: 1,
@@ -143,14 +144,14 @@ fn generate_graphics(
             },
             ..default()
         });
-        world_manager.render_settings.map_image_handle_id = Some(map_image_handle.id);
+        render_settings.map_image_handle_id = Some(map_image_handle.id);
         _ = commands
             .spawn_bundle(Camera2dBundle::default())
             .insert(Pan2d::new());
 
         // TODO: Switch to egui
         _ = commands.spawn_bundle(SpriteBundle {
-            texture: images.get_handle(world_manager.render_settings.map_image_handle_id.unwrap()),
+            texture: images.get_handle(map_image_handle.id),
             sprite: Sprite {
                 custom_size: Some(custom_sprite_size),
                 ..default()
@@ -159,6 +160,7 @@ fn generate_graphics(
         });
     }
 
+    update_textures(&world_manager, &render_settings, &mut images);
 }
 
 #[cfg(feature = "render")]
@@ -222,6 +224,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             })
             .insert_resource(CursorMapPosition::default())
             .insert_resource(OpenedWindows::default())
+            .insert_resource(WorldRenderSettings::default())
             .add_startup_system(generate_graphics)
             .add_system(update_gui.exclusive_system())
             .add_system(update_cursor_map_position)

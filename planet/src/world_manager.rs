@@ -1,7 +1,14 @@
-#[cfg(all(feature = "logging", feature = "render"))]
-use bevy::log::debug;
+#[cfg(feature = "render")]
 use {
-    crate::{macros::iterable_enum, World, WorldGenError},
+    crate::{BiomeStats, TerrainCell, WorldOverlay, WorldRenderSettings, WorldView},
+    bevy::{
+        asset::Assets,
+        render::render_resource::Extent3d,
+        render::{color::Color, texture::Image},
+    },
+};
+use {
+    crate::{World, WorldGenError},
     bevy::{log::warn, utils::default},
     rand::random,
     std::{
@@ -10,15 +17,6 @@ use {
         fs::File,
         io::{self, Read, Write},
         path::Path,
-    },
-};
-#[cfg(feature = "render")]
-use {
-    crate::{BiomeStats, TerrainCell},
-    bevy::{
-        asset::{Assets, HandleId},
-        render::render_resource::Extent3d,
-        render::{color::Color, texture::Image},
     },
 };
 
@@ -85,71 +83,9 @@ impl Display for SaveError {
     }
 }
 
-iterable_enum!(PlanetView { Biomes, Altitude });
-
-#[cfg(feature = "render")]
-#[derive(Debug, Default)]
-pub struct WorldRenderSettings {
-    pub map_image_handle_id: Option<HandleId>,
-
-    rainfall_visible:    bool,
-    temperature_visible: bool,
-    view:                PlanetView,
-}
-
-#[cfg(feature = "render")]
-impl WorldRenderSettings {
-    #[cfg(feature = "render")]
-    pub fn toggle_rainfall(&mut self) {
-        #[cfg(feature = "logging")]
-        if self.rainfall_visible {
-            debug!("Turning rainfall off");
-        } else {
-            debug!("Turning rainfall on");
-        }
-        self.rainfall_visible = !self.rainfall_visible;
-    }
-
-    #[cfg(feature = "render")]
-    pub fn toggle_temperature(&mut self) {
-        #[cfg(feature = "logging")]
-        if self.temperature_visible {
-            debug!("Turning temperature off");
-        } else {
-            debug!("Turning temperature on");
-        }
-        self.temperature_visible = !self.temperature_visible;
-    }
-
-    #[cfg(feature = "render")]
-    pub fn cycle_view(&mut self) {
-        let idx = (PlanetView::iterator()
-            .position(|view| *view == self.view)
-            .unwrap()
-            + 1)
-            % PlanetView::ITEM_COUNT;
-        #[cfg(feature = "logging")]
-        debug!(
-            "Cycling view from {:#?} to {:#?}",
-            self.view,
-            PlanetView::ITEMS[idx]
-        );
-        self.view = PlanetView::ITEMS[idx];
-    }
-}
-
-impl Default for PlanetView {
-    fn default() -> Self {
-        PlanetView::Biomes
-    }
-}
-
 #[derive(Debug, Default)]
 pub struct WorldManager {
     world: Option<World>,
-
-    #[cfg(feature = "render")]
-    pub render_settings: WorldRenderSettings,
 }
 
 impl WorldManager {
@@ -191,6 +127,7 @@ impl WorldManager {
     pub fn load_world<P: AsRef<Path>>(
         &mut self,
         path: P,
+        #[cfg(feature = "render")] render_settings: &WorldRenderSettings,
         #[cfg(feature = "render")] images: &mut Assets<Image>,
     ) -> Result<(), LoadError> {
         let mut file = match File::open(path) {
@@ -214,7 +151,7 @@ impl WorldManager {
                 #[cfg(feature = "render")]
                 {
                     let image_handle = &images.get_handle(
-                        self.render_settings
+                        render_settings
                             .map_image_handle_id
                             .expect("Missing image handle, even though world is present"),
                     );
@@ -264,8 +201,8 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     #[must_use]
-    fn generate_color(&self, cell: &TerrainCell) -> Color {
-        if self.render_settings.view == PlanetView::Biomes {
+    fn generate_color(&self, cell: &TerrainCell, render_settings: &WorldRenderSettings) -> Color {
+        if render_settings.view == WorldView::Biomes {
             return WorldManager::biome_color(cell);
         }
 
@@ -282,7 +219,7 @@ impl WorldManager {
         let mut green = altitude_color.g();
         let mut blue = altitude_color.b();
 
-        if self.render_settings.rainfall_visible {
+        if render_settings.overlay_visible(&WorldOverlay::Rainfall) {
             layer_count += 1.0;
             let rainfall_color = self.rainfall_contour_color(cell.rainfall);
             // if self.contours {
@@ -296,7 +233,7 @@ impl WorldManager {
             blue += rainfall_color.b();
         }
 
-        if self.render_settings.temperature_visible {
+        if render_settings.overlay_visible(&WorldOverlay::Temperature) {
             layer_count += 1.0;
             let temperature_color = self.temperature_contour_color(cell.temperature);
             // if self.contours {
@@ -399,14 +336,14 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     #[must_use]
-    pub fn map_color_bytes(&self) -> Vec<u8> {
+    pub fn map_color_bytes(&self, render_settings: &WorldRenderSettings) -> Vec<u8> {
         self.world()
             .terrain
             .iter()
             .rev()
             .flatten()
             .flat_map(|cell| {
-                self.generate_color(cell)
+                self.generate_color(cell, render_settings)
                     .as_rgba_f32()
                     .iter()
                     .flat_map(|num| num.to_le_bytes())

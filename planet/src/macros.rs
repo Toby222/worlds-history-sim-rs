@@ -1,7 +1,7 @@
 macro_rules! iterable_enum {
     ($Name:ident { $($Variant:ident),*$(,)? }) =>
     {
-        #[derive(Debug, Copy, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+        #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, serde::Deserialize, serde::Serialize)]
         pub enum $Name {
             $($Variant),*,
         }
@@ -11,6 +11,20 @@ macro_rules! iterable_enum {
 
             pub fn iterator() -> core::slice::Iter<'static, $Name> {
                 $Name::ITEMS.iter()
+            }
+        }
+        impl From<$Name> for &'static str {
+            fn from(value: $Name) -> &'static str {
+                match value {
+                    $($Name::$Variant => stringify!($Variant),)*
+                }
+            }
+        }
+        impl From<&$Name> for &'static str {
+            fn from(value: &$Name) -> &'static str {
+                match value {
+                    $($Name::$Variant => stringify!($Variant),)*
+                }
             }
         }
     }

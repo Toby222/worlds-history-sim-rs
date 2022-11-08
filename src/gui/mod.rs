@@ -10,18 +10,20 @@ use {
     crate::gui::{open_window, WidgetId, WidgetSystem},
     bevy::{
         asset::Assets,
-        ecs::change_detection::Mut,
         log::debug,
         render::{render_resource::Extent3d, texture::Image},
     },
-    planet::WorldManager,
+    planet::{WorldManager, WorldRenderSettings},
 };
 
-fn update_textures(world_manager: &WorldManager, images: &mut Mut<Assets<Image>>) {
+pub(crate) fn update_textures(
+    world_manager: &WorldManager,
+    render_settings: &WorldRenderSettings,
+    images: &mut Assets<Image>,
+) {
     debug!("refreshing world texture");
     let map_image_handle = images.get_handle(
-        world_manager
-            .render_settings
+        render_settings
             .map_image_handle_id
             .expect("No map image handle"),
     );
@@ -33,5 +35,5 @@ fn update_textures(world_manager: &WorldManager, images: &mut Mut<Assets<Image>>
         height:                world_manager.world().height,
         depth_or_array_layers: 1,
     });
-    map_image.data = world_manager.map_color_bytes();
+    map_image.data = world_manager.map_color_bytes(render_settings);
 }

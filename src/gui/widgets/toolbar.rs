@@ -1,6 +1,12 @@
 use {
     crate::{
-        gui::{open_window, update_textures, windows::Overlay, WidgetId, WidgetSystem},
+        gui::{
+            open_window,
+            update_textures,
+            windows::{SaveLoad, WorldOverlaySelection, WorldViewSelection},
+            WidgetId,
+            WidgetSystem,
+        },
         macros::iterable_enum,
         resources::OpenedWindows,
     },
@@ -16,50 +22,48 @@ use {
         render::texture::Image,
     },
     bevy_egui::egui::{Layout, Ui},
-    planet::WorldManager,
+    planet::{WorldManager, WorldRenderSettings},
     std::marker::PhantomData,
 };
 
 iterable_enum!(ToolbarButton {
     GenerateWorld,
-    SaveWorld,
-    LoadWorld,
+    SaveLoad,
+    Views,
     Overlays,
-    ToggleBiomes,
 });
 
 impl ToolbarButton {
     fn clicked(self, world: &mut World) {
         world.resource_scope(|world, mut world_manager: Mut<'_, WorldManager>| {
-            match self {
-                ToolbarButton::GenerateWorld => {
-                    if let Err(err) = world_manager.new_world() {
-                        eprintln!("Failed to generate world: {}", err);
-                    } else {
-                        update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
-                    }
-                },
-                ToolbarButton::SaveWorld => {
-                    if let Err(err) = world_manager.save_world("planet.ron") {
-                        eprintln!("Failed to save planet.ron: {}", err);
-                    }
-                },
-                ToolbarButton::LoadWorld => {
-                    let mut images = world.resource_mut::<Assets<Image>>();
-                    if let Err(err) = world_manager.load_world("planet.ron", &mut images) {
-                        eprintln!("Failed to load planet.ron: {}", err);
-                    } else {
-                        update_textures(&world_manager, &mut images);
-                    }
-                },
-                ToolbarButton::Overlays => {
-                    open_window::<Overlay>(&mut world.resource_mut::<OpenedWindows>());
-                },
-                ToolbarButton::ToggleBiomes => {
-                    world_manager.render_settings.cycle_view();
-                    update_textures(&world_manager, &mut world.resource_mut::<Assets<Image>>());
-                },
-            };
+            world.resource_scope(|world, render_settings: Mut<'_, WorldRenderSettings>| {
+                match self {
+                    ToolbarButton::GenerateWorld => {
+                        if let Err(err) = world_manager.new_world() {
+                            eprintln!("Failed to generate world: {}", err);
+                        } else {
+                            update_textures(
+                                &world_manager,
+                                &render_settings,
+                                &mut world.resource_mut::<Assets<Image>>(),
+                            );
+                        }
+                    },
+                    ToolbarButton::SaveLoad => {
+                        open_window::<SaveLoad>(&mut world.resource_mut::<OpenedWindows>());
+                    },
+                    ToolbarButton::Views => {
+                        open_window::<WorldViewSelection>(
+                            &mut world.resource_mut::<OpenedWindows>(),
+                        );
+                    },
+                    ToolbarButton::Overlays => {
+                        open_window::<WorldOverlaySelection>(
+                            &mut world.resource_mut::<OpenedWindows>(),
+                        );
+                    },
+                };
+            });
         });
     }
 }
@@ -67,11 +71,10 @@ impl ToolbarButton {
 impl From<ToolbarButton> for &'static str {
     fn from(button: ToolbarButton) -> Self {
         match button {
+            ToolbarButton::Views => "Change view",
             ToolbarButton::Overlays => "Overlays",
-            ToolbarButton::ToggleBiomes => "Toggle biome view",
             ToolbarButton::GenerateWorld => "Generate new world",
-            ToolbarButton::SaveWorld => "Save",
-            ToolbarButton::LoadWorld => "Load",
+            ToolbarButton::SaveLoad => "Save/Load",
         }
     }
 }

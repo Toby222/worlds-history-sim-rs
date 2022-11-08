@@ -21,10 +21,13 @@ pub(crate) trait WindowSystem: SystemParam {
 }
 
 pub(crate) fn render_windows(world: &mut World, ctx: &Context) {
-    // TODO: Windows are hard-coded here instead of being iterable.
-    // Is that good enough? Probably, yea.
-    window::<windows::Overlay>(world, ctx);
+    // TODO: Windows are hard-coded here instead of being iterable, and allows
+    // creating new windows that are never rendered.
+    // Is that good enough?
     window::<windows::TileInfo>(world, ctx);
+    window::<windows::WorldViewSelection>(world, ctx);
+    window::<windows::WorldOverlaySelection>(world, ctx);
+    window::<windows::SaveLoad>(world, ctx);
 }
 
 pub(crate) fn open_window<S: 'static + WindowSystem>(windows: &mut OpenedWindows) {
