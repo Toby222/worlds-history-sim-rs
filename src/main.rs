@@ -124,6 +124,13 @@ fn generate_graphics(
             .expect("Failed to get 'Proportional' FontFamily")
             .push(FONT_NAME.to_owned());
         ctx.set_fonts(fonts);
+
+        let mut style = (*ctx.style()).clone();
+        for style in style.text_styles.iter_mut() {
+            style.1.size *= 16.0 / 12.0;
+        }
+        ctx.set_style(style);
+        debug!("Fonts: {:#?}", &ctx.style().text_styles);
     }
 
     let world = world_manager.world();
