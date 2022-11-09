@@ -130,6 +130,7 @@ fn generate_graphics(
             style.1.size *= 16.0 / 12.0;
         }
         ctx.set_style(style);
+        #[cfg(feature = "logging")]
         debug!("Fonts: {:#?}", &ctx.style().text_styles);
     }
 
