@@ -26,22 +26,34 @@ impl WindowSystem for SaveLoad<'_, '_> {
             world.resource_scope(|world, mut should_redraw: Mut<ShouldRedraw>| {
                 let mut state = state.get_mut(world);
 
-                // TODO: Real file selection dialog.
-                ui.text_edit_singleline(&mut *state.file_name);
-
                 ui.horizontal(|ui| {
                     if ui.button("Save").clicked() {
-                        if let Err(err) = world_manager.save_world(&*state.file_name) {
-                            // TODO: Error popup
-                            error!("Failed to save: {err:#?}");
+                        if let Some(path) = tinyfiledialogs::save_file_dialog_with_filter(
+                            "Save world",
+                            state.file_name.as_str(),
+                            &["*.rsplnt", "*.ron"],
+                            "World file",
+                        ) {
+                            if let Err(err) = world_manager.save_world(&path) {
+                                // TODO: Error popup
+                                error!("Failed to save: {err:#?}");
+                            }
+                            *state.file_name = path;
                         }
                     }
                     if ui.button("Load").clicked() {
-                        if let Err(err) = world_manager.load_world(&*state.file_name) {
-                            // TODO: Error popup
-                            error!("Failed to load: {err:#?}");
+                        if let Some(path) = tinyfiledialogs::open_file_dialog(
+                            "World file",
+                            state.file_name.as_str(),
+                            Some((&["*.ron", "*.rsplnt"], "*.ron,*.rsplnt")),
+                        ) {
+                            if let Err(err) = world_manager.load_world(&path) {
+                                // TODO: Error popup
+                                error!("Failed to load: {err:#?}");
+                            }
+                            *state.file_name = path;
+                            should_redraw.0 = true;
                         }
-                        should_redraw.0 = true;
                     }
                 });
             });
@@ -50,5 +62,9 @@ impl WindowSystem for SaveLoad<'_, '_> {
 
     fn name() -> &'static str {
         "Save/Load world"
+    }
+
+    fn resizable() -> bool {
+        true
     }
 }

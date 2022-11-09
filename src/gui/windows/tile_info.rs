@@ -67,4 +67,8 @@ impl WindowSystem for TileInfo<'_, '_> {
     fn name() -> &'static str {
         "Tile Info"
     }
+
+    fn resizable() -> bool {
+        false
+    }
 }

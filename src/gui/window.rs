@@ -18,6 +18,7 @@ use {
 pub(crate) trait WindowSystem: SystemParam {
     fn draw_contents(world: &mut World, state: &mut SystemState<Self>, ui: &mut Ui);
     fn name() -> &'static str;
+    fn resizable() -> bool;
 }
 
 pub(crate) fn render_windows(world: &mut World, ctx: &Context) {
@@ -64,7 +65,7 @@ fn window<S: 'static + WindowSystem>(world: &mut World, ctx: &Context) {
 
             let mut still_open = true;
             Window::new(S::name())
-                .resizable(false)
+                .resizable(S::resizable())
                 .open(&mut still_open)
                 .title_bar(true)
                 .show(ctx, |ui| {

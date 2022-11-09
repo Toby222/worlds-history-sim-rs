@@ -37,4 +37,8 @@ impl WindowSystem for WorldViewSelection<'_, '_> {
     fn name() -> &'static str {
         "View Selection"
     }
+
+    fn resizable() -> bool {
+        false
+    }
 }

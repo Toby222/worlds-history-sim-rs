@@ -37,4 +37,8 @@ impl WindowSystem for WorldOverlaySelection<'_, '_> {
     fn name() -> &'static str {
         "Overlay Selection"
     }
+
+    fn resizable() -> bool {
+        false
+    }
 }

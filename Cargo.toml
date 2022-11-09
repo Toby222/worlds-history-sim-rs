@@ -27,7 +27,7 @@ codegen-units = 1
 # bevy/trace_chrome for tracing by function
 # https://github.com/bevyengine/bevy/blob/main/docs/profiling.md
 logging = ["planet/logging"]
-render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/x11", "bevy/wayland", "bevy/render", "planet/render", "dep:fxhash", "dep:bevy_egui"]
+render = ["bevy/bevy_asset", "bevy/bevy_winit", "bevy/x11", "bevy/wayland", "bevy/render", "planet/render", "dep:fxhash", "dep:bevy_egui", "dep:tinyfiledialogs"]
 default = ["render", "logging"]
 
 [dependencies.planet]
@@ -46,4 +46,8 @@ optional = true
 version = "0.16.1"
 optional = true
 default-features = false
-# features = ["manage_clipboard"] # In the future, when I add text input.
+features = ["manage_clipboard"]
+
+[dependencies.tinyfiledialogs]
+version = "3.9.1"
+optional = true
