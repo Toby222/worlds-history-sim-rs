@@ -97,11 +97,16 @@ pub struct TerrainCell {
     pub rainfall:    f32,
     pub temperature: f32,
 
+    #[serde(skip)]
+    pub x: usize,
+    #[serde(skip)]
+    pub y: usize,
+
     pub biome_presences: Vec<(BiomeType, f32)>,
 }
 
 impl World {
-    const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
+    pub(crate) const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
     const CONTINENT_MAX_SIZE_FACTOR: f32 = 6.0;
     const CONTINENT_MIN_SIZE_FACTOR: f32 = 2.5;
     pub(crate) const MAX_ALTITUDE: f32 = 15000.0;
@@ -300,6 +305,9 @@ impl World {
                 if altitude < self.min_altitude {
                     self.min_altitude = altitude;
                 }
+
+                self.terrain[y][x].x = x;
+                self.terrain[y][x].y = y;
             }
         }
         info!("Done generating altitude");
@@ -547,89 +555,78 @@ impl World {
     }
 
     #[must_use]
-    pub fn cell_neighbors(&self, x: usize, y: usize) -> HashMap<CompassDirection, (usize, usize)> {
+    pub fn cell_neighbors(&self, x: usize, y: usize) -> HashMap<CompassDirection, &TerrainCell> {
         let mut neighbors = HashMap::new();
 
         let height = self.height as usize;
         let width = self.width as usize;
 
+        let west_x = (width + x - 1) % width;
+        let east_x = (x + 1) % width;
+
         let north_edge = y >= height - 1;
-        let east_edge = x >= width - 1;
         let south_edge = y == 0;
-        let west_edge = x == 0;
 
         if !north_edge {
-            _ = neighbors.insert_unique_unchecked(CompassDirection::North, (y + 1, x));
+            _ = neighbors
+                .insert_unique_unchecked(CompassDirection::NorthWest, &self.terrain[y + 1][west_x]);
+            _ = neighbors.insert_unique_unchecked(CompassDirection::North, &self.terrain[y + 1][x]);
+            _ = neighbors
+                .insert_unique_unchecked(CompassDirection::NorthEast, &self.terrain[y + 1][east_x]);
         }
-        if !north_edge && !east_edge {
-            _ = neighbors.insert_unique_unchecked(CompassDirection::NorthEast, (y + 1, x + 1));
-        }
-        if !east_edge {
-            _ = neighbors.insert_unique_unchecked(CompassDirection::East, (y, x + 1));
-        }
-        if !south_edge && !east_edge {
-            _ = neighbors.insert_unique_unchecked(CompassDirection::SouthEast, (y - 1, x + 1));
-        }
+
+        _ = neighbors.insert_unique_unchecked(CompassDirection::West, &self.terrain[y][east_x]);
+        _ = neighbors.insert_unique_unchecked(CompassDirection::East, &self.terrain[y][west_x]);
+
         if !south_edge {
-            _ = neighbors.insert_unique_unchecked(CompassDirection::South, (y - 1, x));
+            _ = neighbors
+                .insert_unique_unchecked(CompassDirection::SouthWest, &self.terrain[y - 1][west_x]);
+            _ = neighbors.insert_unique_unchecked(CompassDirection::South, &self.terrain[y - 1][x]);
+            _ = neighbors
+                .insert_unique_unchecked(CompassDirection::SouthEast, &self.terrain[y - 1][east_x]);
         }
-        if !south_edge && !west_edge {
-            _ = neighbors.insert_unique_unchecked(CompassDirection::SouthWest, (y - 1, x - 1));
-        }
-        if !west_edge {
-            _ = neighbors.insert_unique_unchecked(CompassDirection::West, (y, x - 1));
-        };
-        if !north_edge && !west_edge {
-            _ = neighbors.insert_unique_unchecked(CompassDirection::NorthWest, (y + 1, x - 1));
-        };
 
         neighbors
     }
 
     #[must_use]
-    pub fn get_slant(&self, x: usize, y: usize) -> f32 {
-        let neighbors = self.cell_neighbors(x, y);
-        let terrain = &self.terrain;
+    pub fn get_slant(&self, cell: &TerrainCell) -> f32 {
+        let neighbors = self.cell_neighbors(cell.x, cell.y);
 
-        let mut west_altitude = f32::MIN;
-        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::North) {
-            west_altitude = f32::max(
-                west_altitude,
-                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
-            );
+        let mut west_altitude = 0.0;
+        let mut neighbor_count = 0u8;
+
+        if let Some(neighbor) = neighbors.get(&CompassDirection::North) {
+            west_altitude = f32::max(west_altitude, neighbor.altitude);
+            neighbor_count += 1;
         }
-        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::NorthWest) {
-            west_altitude = f32::max(
-                west_altitude,
-                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
-            );
+        if let Some(neighbor) = neighbors.get(&CompassDirection::NorthWest) {
+            west_altitude = f32::max(west_altitude, neighbor.altitude);
+            neighbor_count += 1;
         }
-        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::West) {
-            west_altitude = f32::max(
-                west_altitude,
-                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
-            );
+        if let Some(neighbor) = neighbors.get(&CompassDirection::West) {
+            west_altitude = f32::max(west_altitude, neighbor.altitude);
+            neighbor_count += 1;
         }
+
+        west_altitude /= f32::from(neighbor_count);
+        neighbor_count = 0;
 
         let mut east_altitude = f32::MIN;
-        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::North) {
-            east_altitude = f32::max(
-                east_altitude,
-                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
-            );
+        if let Some(neighbor) = neighbors.get(&CompassDirection::North) {
+            east_altitude = f32::max(east_altitude, neighbor.altitude);
+            neighbor_count += 1;
         }
-        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::NorthWest) {
-            east_altitude = f32::max(
-                east_altitude,
-                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
-            );
+        if let Some(neighbor) = neighbors.get(&CompassDirection::NorthWest) {
+            east_altitude = f32::max(east_altitude, neighbor.altitude);
+            neighbor_count += 1;
         }
-        if let Some(neighbor_coords) = neighbors.get(&CompassDirection::West) {
-            east_altitude = f32::max(
-                east_altitude,
-                terrain[neighbor_coords.0][neighbor_coords.1].altitude,
-            );
+        if let Some(neighbor) = neighbors.get(&CompassDirection::West) {
+            east_altitude = f32::max(east_altitude, neighbor.altitude);
+            neighbor_count += 1;
         }
+
+        east_altitude /= f32::from(neighbor_count);
 
         west_altitude - east_altitude
     }

@@ -175,31 +175,19 @@ impl WorldManager {
     #[cfg(feature = "render")]
     #[must_use]
     fn generate_color(&self, cell: &TerrainCell, render_settings: &WorldRenderSettings) -> Color {
-        if render_settings.view == WorldView::Biomes {
-            return WorldManager::biome_color(cell);
-        }
+        let base_color = match render_settings.view {
+            WorldView::Biomes => self.biome_color(cell),
+            WorldView::Topography => WorldManager::altitude_contour_color(cell.altitude),
+        };
+        let mut normalizer = 1.0;
 
-        let altitude_color = WorldManager::altitude_contour_color(cell.altitude);
-        // let altitude_color = if self.contours {
-        //     WorldManager::altitude_contour_color(cell.altitude)
-        // } else {
-        //     WorldManager::altitude_color(cell.altitude)
-        // };
-
-        let mut layer_count = 1.0;
-
-        let mut red = altitude_color.r();
-        let mut green = altitude_color.g();
-        let mut blue = altitude_color.b();
+        let mut red = base_color.r();
+        let mut green = base_color.g();
+        let mut blue = base_color.b();
 
         if render_settings.overlay_visible(&WorldOverlay::Rainfall) {
-            layer_count += 1.0;
+            normalizer += 1.0;
             let rainfall_color = self.rainfall_contour_color(cell.rainfall);
-            // if self.contours {
-            //     self.rainfall_contour_color(cell.rainfall)
-            // } else {
-            //     WorldManager::rainfall_color(cell.rainfall)
-            // };
 
             red += rainfall_color.r();
             green += rainfall_color.g();
@@ -207,20 +195,15 @@ impl WorldManager {
         }
 
         if render_settings.overlay_visible(&WorldOverlay::Temperature) {
-            layer_count += 1.0;
+            normalizer += 1.0;
             let temperature_color = self.temperature_contour_color(cell.temperature);
-            // if self.contours {
-            //     self.temperature_contour_color(cell.temperature)
-            // } else {
-            //     WorldManager::temperature_color(cell.temperature)
-            // };
 
             red += temperature_color.r();
             green += temperature_color.g();
             blue += temperature_color.b();
         }
 
-        Color::rgb(red / layer_count, green / layer_count, blue / layer_count)
+        Color::rgb(red / normalizer, green / normalizer, blue / normalizer)
     }
 
     // #[cfg(feature = "render")]
@@ -280,19 +263,28 @@ impl WorldManager {
 
     #[cfg(feature = "render")]
     #[must_use]
-    fn biome_color(cell: &TerrainCell) -> Color {
-        cell.biome_presences
-            .iter()
-            .fold(Color::BLACK, |color, (biome_type, presence)| {
-                let biome: BiomeStats = (*biome_type).into();
-                let biome_color = biome.color;
+    fn biome_color(&self, cell: &TerrainCell) -> Color {
+        let slant = self.world().get_slant(cell);
 
-                Color::rgb(
-                    color.r() + (biome_color.r() * presence),
-                    color.g() + (biome_color.g() * presence),
-                    color.b() + (biome_color.b() * presence),
-                )
-            })
+        let slant_factor = f32::min(1.0, (4.0 + (10.0 * slant / World::ALTITUDE_SPAN)) / 5.0);
+        let altitude_factor = f32::min(
+            1.0,
+            (0.5 + (cell.altitude - World::MIN_ALTITUDE) / World::ALTITUDE_SPAN) / 1.5,
+        );
+
+        let mut red = 0.0;
+        let mut green = 0.0;
+        let mut blue = 0.0;
+
+        for (biome, presence) in cell.biome_presences.iter() {
+            red += BiomeStats::from(biome).color.r() * presence;
+            green += BiomeStats::from(biome).color.g() * presence;
+            blue += BiomeStats::from(biome).color.b() * presence;
+        }
+        red *= slant_factor * altitude_factor;
+        green *= slant_factor * altitude_factor;
+        blue *= slant_factor * altitude_factor;
+        Color::rgb(red, green, blue)
     }
 
     // #[cfg(feature = "render")]

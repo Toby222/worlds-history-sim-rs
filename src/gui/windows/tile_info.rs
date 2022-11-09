@@ -24,9 +24,6 @@ impl WindowSystem for TileInfo<'_, '_> {
                 let cursor_position = world.resource::<CursorMapPosition>();
                 let cursor_y = cursor_position.y;
                 let cursor_x = cursor_position.x;
-                _ = ui.label("Coordinates");
-                _ = ui.label(cursor_position.to_string());
-                ui.end_row();
 
                 let world_manager = world.resource::<WorldManager>();
                 if cursor_x >= 0
@@ -39,8 +36,13 @@ impl WindowSystem for TileInfo<'_, '_> {
                         rainfall,
                         temperature,
                         biome_presences,
+                        x,
+                        y,
                     } = &world_manager.world().terrain[cursor_y as usize][cursor_x as usize];
 
+                    _ = ui.label("Coordinates");
+                    _ = ui.label(format!("{x}:{y}"));
+                    ui.end_row();
                     _ = ui.label("Altitude");
                     _ = ui.label(format!("{altitude:.2}"));
                     ui.end_row();

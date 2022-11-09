@@ -185,8 +185,16 @@ impl<'de> Deserialize<'de> for World {
                 let width = width.ok_or_else(|| Error::missing_field("width"))?;
                 let height = height.ok_or_else(|| Error::missing_field("height"))?;
                 let seed = seed.ok_or_else(|| Error::missing_field("seed"))?;
-                let terrain: Vec<Vec<TerrainCell>> =
+                let mut terrain: Vec<Vec<TerrainCell>> =
                     terrain.ok_or_else(|| Error::missing_field("terrain"))?;
+
+                for x in 0..width as usize {
+                    for y in 0..height as usize {
+                        terrain[y][x].x = x;
+                        terrain[y][x].y = y;
+                    }
+                }
+
                 let continent_offsets =
                     continent_offsets.ok_or_else(|| Error::missing_field("continent_offsets"))?;
                 let continent_widths =
