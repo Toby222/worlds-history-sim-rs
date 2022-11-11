@@ -63,7 +63,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           profile: minimal
           toolchain: nightly
