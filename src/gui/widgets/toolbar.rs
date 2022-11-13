@@ -7,7 +7,7 @@ use {
             WidgetSystem,
         },
         macros::iterable_enum,
-        resources::{OpenedWindows, ShouldRedraw},
+        resources::{GenerateWorldTask, OpenedWindows},
     },
     bevy::{
         ecs::{
@@ -34,10 +34,11 @@ impl ToolbarButton {
         world.resource_scope(|world, mut world_manager: Mut<'_, WorldManager>| {
             match self {
                 ToolbarButton::GenerateWorld => {
-                    if let Err(err) = world_manager.new_world(None) {
-                        eprintln!("Failed to generate world: {}", err);
+                    let generate_world_task = &mut world.resource_mut::<GenerateWorldTask>();
+                    if generate_world_task.0.is_some() {
+                        debug!("Already generating new world")
                     } else {
-                        world.resource_mut::<ShouldRedraw>().0 = true;
+                        generate_world_task.0 = Some(world_manager.new_world_async(None))
                     }
                 },
                 ToolbarButton::SaveLoad => {

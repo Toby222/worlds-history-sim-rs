@@ -6,6 +6,7 @@ use {
             world::World,
         },
         log::debug,
+        prelude::*,
         utils::HashMap,
     },
     bevy_egui::egui::Ui,
@@ -44,8 +45,8 @@ pub(crate) fn widget<S: 'static + WidgetSystem>(world: &mut World, ui: &mut Ui, 
 /// A UI widget may have multiple instances. We need to ensure the local state
 /// of these instances is not shared. This hashmap allows us to dynamically
 /// store instance states.
-#[derive(Default)]
-struct StateInstances<T: WidgetSystem> {
+#[derive(Default, Resource)]
+struct StateInstances<T: WidgetSystem + 'static> {
     instances: HashMap<WidgetId, SystemState<T>>,
 }
 

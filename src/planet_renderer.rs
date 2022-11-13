@@ -1,6 +1,10 @@
 use {
     crate::macros::iterable_enum_stringify,
-    bevy::{asset::HandleId, prelude::Color, utils::HashSet},
+    bevy::{
+        asset::HandleId,
+        prelude::{Color, Resource},
+        utils::HashSet,
+    },
     planet::{BiomeStats, TerrainCell, World, WorldManager},
 };
 
@@ -15,7 +19,7 @@ iterable_enum_stringify!(WorldOverlay {
 });
 
 #[cfg(feature = "render")]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Resource)]
 pub struct WorldRenderSettings {
     pub map_image_handle_id: Option<HandleId>,
 

@@ -1,6 +1,11 @@
 use {
     crate::{World, WorldGenError},
-    bevy::{log::warn, utils::default},
+    bevy::{
+        log::warn,
+        prelude::Resource,
+        tasks::{AsyncComputeTaskPool, Task},
+        utils::default,
+    },
     rand::random,
     std::{
         error::Error,
@@ -14,7 +19,7 @@ use {
 #[derive(Debug)]
 pub enum LoadError {
     MissingSave(io::Error),
-    InvalidSave(ron::Error),
+    InvalidSave(ron::error::SpannedError),
 }
 impl Error for LoadError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
@@ -74,12 +79,15 @@ impl Display for SaveError {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Resource)]
 pub struct WorldManager {
     world: Option<World>,
 }
 
 impl WorldManager {
+    const NEW_WORLD_HEIGHT: u32 = 200;
+    const NEW_WORLD_WIDTH: u32 = 400;
+
     #[must_use]
     pub fn new() -> WorldManager {
         default()
@@ -160,11 +168,34 @@ impl WorldManager {
         self.get_world().unwrap()
     }
 
+    pub fn set_world(&mut self, world: World) {
+        self.world = Some(world);
+    }
+
     pub fn new_world(&mut self, seed: Option<u32>) -> Result<&World, WorldGenError> {
         let seed = seed.unwrap_or_else(random);
-        let mut new_world = World::new(400, 200, seed);
+        let mut new_world = World::new(
+            WorldManager::NEW_WORLD_WIDTH,
+            WorldManager::NEW_WORLD_HEIGHT,
+            seed,
+        );
         new_world.generate()?;
         self.world = Some(new_world);
         Ok(self.get_world().unwrap())
+    }
+
+    pub fn new_world_async(&mut self, seed: Option<u32>) -> Task<Result<World, WorldGenError>> {
+        AsyncComputeTaskPool::get().spawn(async move {
+            let seed = seed.unwrap_or_else(random);
+            let mut new_world = World::async_new(
+                WorldManager::NEW_WORLD_WIDTH,
+                WorldManager::NEW_WORLD_HEIGHT,
+                seed,
+            );
+            match new_world.generate() {
+                Ok(()) => Ok(new_world),
+                Err(err) => Err(err),
+            }
+        })
     }
 }

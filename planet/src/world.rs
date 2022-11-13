@@ -1,4 +1,3 @@
-// TODO: Logging doesn't seem to work here? Figure out why and fix
 use {
     crate::{
         math_util::{
@@ -129,6 +128,27 @@ impl World {
     pub const TERRAIN_NOISE_FACTOR_4: f32 = 2.5;
 
     pub fn new(width: u32, height: u32, seed: u32) -> World {
+        World {
+            width,
+            height,
+            seed,
+            terrain: vec![
+                vec![TerrainCell::default(); width.try_into().unwrap()];
+                height.try_into().unwrap()
+            ],
+            continent_offsets: [default(); World::NUM_CONTINENTS as usize],
+            continent_sizes: [default(); World::NUM_CONTINENTS as usize],
+            max_altitude: World::MIN_ALTITUDE,
+            min_altitude: World::MAX_ALTITUDE,
+            max_rainfall: World::MIN_RAINFALL,
+            min_rainfall: World::MAX_RAINFALL,
+            max_temperature: World::MIN_TEMPERATURE,
+            min_temperature: World::MAX_TEMPERATURE,
+            rng: StdRng::seed_from_u64(seed as u64),
+        }
+    }
+
+    pub fn async_new(width: u32, height: u32, seed: u32) -> World {
         World {
             width,
             height,

@@ -1,65 +1,75 @@
 pub(crate) struct WorldPlugins;
 
+#[cfg(not(feature = "render"))]
+use bevy::app::ScheduleRunnerPlugin;
+#[cfg(all(feature = "logging"))]
+use bevy::diagnostic::{DiagnosticsPlugin, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::{
     app::{PluginGroup, PluginGroupBuilder},
     core::CorePlugin,
-    diagnostic::{DiagnosticsPlugin, LogDiagnosticsPlugin},
-    log::LogPlugin,
+    log::{Level, LogPlugin},
+    prelude::*,
     time::TimePlugin,
+};
+#[cfg(feature = "render")]
+use {
+    bevy::{
+        asset::AssetPlugin,
+        core_pipeline::CorePipelinePlugin,
+        input::InputPlugin,
+        render::RenderPlugin,
+        sprite::SpritePlugin,
+        text::TextPlugin,
+        transform::TransformPlugin,
+        ui::UiPlugin,
+        window::WindowPlugin,
+        winit::WinitPlugin,
+    },
+    bevy_egui::EguiPlugin,
 };
 
 impl PluginGroup for WorldPlugins {
-    fn build(&mut self, group: &mut PluginGroupBuilder) {
-        _ = group.add(LogPlugin).add(CorePlugin).add(TimePlugin);
+    fn build(self) -> PluginGroupBuilder {
+        let mut group_builder = PluginGroupBuilder::start::<Self>()
+            .add(LogPlugin {
+                #[cfg(feature = "logging")]
+                level: Level::DEBUG,
+                #[cfg(not(feature = "logging"))]
+                level: Level::WARN,
+                ..default()
+            })
+            .add(CorePlugin::default()) // sets compute pool config
+            .add(TimePlugin);
 
         #[cfg(feature = "render")]
         {
-            use {
-                crate::plugins::panning_plugin::PanningPlugin,
-                bevy::{
-                    asset::AssetPlugin,
-                    core_pipeline::CorePipelinePlugin,
-                    hierarchy::HierarchyPlugin,
-                    input::InputPlugin,
-                    render::RenderPlugin,
-                    sprite::SpritePlugin,
-                    text::TextPlugin,
-                    transform::TransformPlugin,
-                    ui::UiPlugin,
-                    window::WindowPlugin,
-                    winit::WinitPlugin,
-                },
-                bevy_egui::EguiPlugin,
-            };
-
-            _ = group
+            group_builder = group_builder
                 .add(TransformPlugin)
-                // hierarchy
                 .add(InputPlugin)
-                .add(WindowPlugin)
-                .add(AssetPlugin)
-                .add(HierarchyPlugin)
-                .add(WinitPlugin)
+                .add(WindowPlugin::default())
+                .add(AssetPlugin::default())
                 .add(RenderPlugin)
+                .add(ImagePlugin::default_nearest())
+                .add(WinitPlugin)
                 .add(CorePipelinePlugin)
                 .add(SpritePlugin)
                 .add(TextPlugin)
                 .add(UiPlugin)
-                .add(PanningPlugin)
                 .add(EguiPlugin);
         }
         #[cfg(not(feature = "render"))]
         {
-            use bevy::app::ScheduleRunnerPlugin;
-            _ = group.add(ScheduleRunnerPlugin);
+            group_builder = group_builder.add(ScheduleRunnerPlugin);
         }
 
-        _ = group.add(DiagnosticsPlugin);
-        #[cfg(all(feature = "logging"))]
+        #[cfg(feature = "logging")]
         {
-            use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-            _ = group.add(FrameTimeDiagnosticsPlugin);
+            group_builder = group_builder
+                .add(DiagnosticsPlugin)
+                .add(FrameTimeDiagnosticsPlugin)
+                .add(LogDiagnosticsPlugin::default());
         }
-        _ = group.add(LogDiagnosticsPlugin::default());
+
+        group_builder
     }
 }

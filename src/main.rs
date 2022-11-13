@@ -1,5 +1,10 @@
 #![cfg_attr(not(feature = "logging"), windows_subsystem = "windows")]
 
+use {
+    crate::resources::GenerateWorldTask,
+    futures_lite::future::{block_on, poll_once},
+};
+
 pub(crate) mod components;
 #[cfg(feature = "render")]
 pub(crate) mod gui;
@@ -7,52 +12,16 @@ pub(crate) mod macros;
 #[cfg(feature = "render")]
 pub(crate) mod planet_renderer;
 pub(crate) mod plugins;
-#[cfg(feature = "render")]
 pub(crate) mod resources;
 
-use {
-    bevy::{
-        app::App,
-        log::LogSettings,
-        utils::{default, tracing::Level},
-    },
-    planet::WorldManager,
-    plugins::WorldPlugins,
-};
+use {bevy::prelude::*, planet::WorldManager, plugins::WorldPlugins};
 #[cfg(feature = "render")]
 use {
-    bevy::{
-        asset::Assets,
-        core_pipeline::core_2d::{Camera2d, Camera2dBundle},
-        ecs::{
-            change_detection::{Mut, ResMut},
-            query::With,
-            system::{Commands, IntoExclusiveSystem, Query, Res},
-            world::World,
-        },
-        input::{keyboard::KeyCode, Input},
-        prelude::Vec2,
-        render::{
-            camera::{Camera, RenderTarget},
-            render_resource::{
-                Extent3d,
-                TextureDescriptor,
-                TextureDimension,
-                TextureFormat,
-                TextureUsages,
-            },
-            texture::{Image, ImageSettings},
-        },
-        sprite::{Sprite, SpriteBundle},
-        transform::components::GlobalTransform,
-        window::{WindowDescriptor, Windows},
-        winit::WinitSettings,
-    },
+    bevy::render::camera::RenderTarget,
     bevy_egui::{
         egui::{FontData, FontDefinitions, FontFamily},
         EguiContext,
     },
-    components::panning::Pan2d,
     gui::{render_windows, widget, widgets::ToolbarWidget, window::open_window, windows::TileInfo},
     planet_renderer::{WorldRenderSettings, WorldRenderer},
     resources::{CursorMapPosition, OpenedWindows, ShouldRedraw},
@@ -98,16 +67,45 @@ fn update_cursor_map_position(
     }
 }
 
+fn handle_generate_world_task(
+    mut generate_world_task: ResMut<'_, GenerateWorldTask>,
+    mut world_manager: ResMut<'_, WorldManager>,
+    #[cfg(feature = "render")] mut should_redraw: ResMut<'_, ShouldRedraw>,
+) {
+    if let Some(task) = &mut generate_world_task.0 {
+        if task.is_finished() {
+            debug!("Done");
+            if let Some(result) = block_on(poll_once(task)) {
+                match result {
+                    Ok(world) => {
+                        world_manager.set_world(world);
+                        #[cfg(feature = "render")]
+                        {
+                            should_redraw.0 = true;
+                        }
+                    },
+                    Err(err) => error!("{err:#?}"),
+                }
+            }
+            generate_world_task.0 = None;
+        } else {
+            debug!("Working")
+        }
+    }
+}
+
 #[cfg(feature = "render")]
 fn generate_graphics(
     mut commands: Commands<'_, '_>,
     world_manager: ResMut<'_, WorldManager>,
-    mut images: ResMut<'_, Assets<Image>>,
-    mut egui_context: ResMut<'_, EguiContext>,
-    mut render_settings: ResMut<'_, WorldRenderSettings>,
+    images: ResMut<'_, Assets<Image>>,
+    egui_context: ResMut<'_, EguiContext>,
+    render_settings: ResMut<'_, WorldRenderSettings>,
 ) {
     // Add Julia-Mono font to egui
+
     {
+        let egui_context = egui_context.into_inner();
         let ctx = egui_context.ctx_mut();
         let mut fonts = FontDefinitions::default();
         const FONT_NAME: &str = "Julia-Mono";
@@ -143,6 +141,14 @@ fn generate_graphics(
     };
     // Set up 2D map mode
     {
+        use bevy::render::render_resource::{
+            TextureDescriptor,
+            TextureDimension,
+            TextureFormat,
+            TextureUsages,
+        };
+        let images = images.into_inner();
+        let mut render_settings = render_settings.into_inner();
         let map_image_handle = images.add(Image {
             data: vec![],
             texture_descriptor: TextureDescriptor {
@@ -156,14 +162,13 @@ fn generate_graphics(
             },
             ..default()
         });
-        render_settings.map_image_handle_id = Some(map_image_handle.id);
-        _ = commands
-            .spawn_bundle(Camera2dBundle::default())
-            .insert(Pan2d::new());
+        render_settings.map_image_handle_id = Some(map_image_handle.id());
+        _ = commands.spawn(Camera2dBundle::default());
 
         // TODO: Switch to egui
-        _ = commands.spawn_bundle(SpriteBundle {
-            texture: images.get_handle(map_image_handle.id),
+        _ = commands.spawn(SpriteBundle {
+            texture: images
+                .get_handle(unsafe { render_settings.map_image_handle_id.unwrap_unchecked() }),
             sprite: Sprite {
                 custom_size: Some(custom_sprite_size),
                 ..default()
@@ -234,7 +239,7 @@ fn redraw_map(
         let map_image = images
             .get_mut(&map_image_handle)
             .expect("Map image handle pointing to non-existing image");
-        map_image.resize(Extent3d {
+        map_image.resize(bevy::render::render_resource::Extent3d {
             width:                 world_manager.world().width,
             height:                world_manager.world().height,
             depth_or_array_layers: 1,
@@ -246,48 +251,49 @@ fn redraw_map(
 }
 
 #[cfg(feature = "render")]
-const WORLD_SCALE: i32 = 4;
+const WORLD_SCALE: i32 = 2;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new();
     let mut manager = WorldManager::new();
     #[cfg(feature = "render")]
     {
-        let world = manager.new_world(None)?;
+        use bevy::winit::WinitSettings;
+
+        let world = manager.new_world(Some(0))?;
         _ = app
             .insert_resource(WinitSettings::game())
-            // Use nearest-neighbor rendering for cripsier pixels
-            .insert_resource(ImageSettings::default_nearest())
-            .insert_resource(WindowDescriptor {
+            .insert_resource(CursorMapPosition::default())
+            .insert_resource(OpenedWindows::default())
+            .insert_resource(WorldRenderSettings::default())
+            .insert_resource(ShouldRedraw::default())
+            .insert_resource(GenerateWorldTask::default())
+            .add_startup_system(generate_graphics)
+            .add_system(update_gui)
+            .add_system(update_cursor_map_position)
+            .add_system(open_tile_info)
+            .add_system(redraw_map);
+
+        app.add_plugins(WorldPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
                 width: (WORLD_SCALE * world.width as i32) as f32,
                 height: (WORLD_SCALE * world.height as i32) as f32,
                 title: String::from("World-RS"),
                 resizable: true,
                 ..default()
-            })
-            .insert_resource(CursorMapPosition::default())
-            .insert_resource(OpenedWindows::default())
-            .insert_resource(WorldRenderSettings::default())
-            .insert_resource(ShouldRedraw::default())
-            .add_startup_system(generate_graphics)
-            .add_system(update_gui.exclusive_system())
-            .add_system(update_cursor_map_position)
-            .add_system(open_tile_info)
-            .add_system(redraw_map);
+            },
+            ..default()
+        }));
     }
     #[cfg(not(feature = "render"))]
     {
-        _ = manager.new_world()?
+        _ = manager.new_world(Some(0))?;
+
+        app.add_plugins(WorldPlugins);
     }
 
-    _ = app.insert_resource(LogSettings {
-        #[cfg(feature = "logging")]
-        level: Level::DEBUG,
-        #[cfg(not(feature = "logging"))]
-        level: Level::WARN,
-        ..default()
-    });
-
-    app.add_plugins(WorldPlugins).insert_resource(manager).run();
+    app.add_system(handle_generate_world_task)
+        .insert_resource(manager)
+        .run();
 
     Ok(())
 }

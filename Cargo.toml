@@ -1,6 +1,6 @@
 [package]
 name = "worlds-history-sim-rs"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 resolver = "2"
 
@@ -35,7 +35,7 @@ path = "planet"
 default-features = false
 
 [dependencies.bevy]
-version = "0.8.1"
+version = "0.9.0"
 default-features = false
 
 [dependencies.fxhash]
@@ -43,7 +43,7 @@ version = "0.2.1"
 optional = true
 
 [dependencies.bevy_egui]
-version = "0.16.1"
+version = "0.17"
 optional = true
 default-features = false
 features = ["manage_clipboard"]
@@ -51,3 +51,7 @@ features = ["manage_clipboard"]
 [dependencies.tinyfiledialogs]
 version = "3.9.1"
 optional = true
+
+[dependencies.futures-lite]
+version = "1.12.0"
+default-features = false

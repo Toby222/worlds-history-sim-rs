@@ -8,6 +8,7 @@ use {
             world::World,
         },
         log::debug,
+        prelude::Resource,
         utils::HashMap,
     },
     bevy_egui::egui::{Context, Ui, Window},
@@ -80,8 +81,8 @@ fn window<S: 'static + WindowSystem>(world: &mut World, ctx: &Context) {
     });
 }
 
-#[derive(Default)]
-struct StateInstances<T: WindowSystem> {
+#[derive(Default, Resource)]
+struct StateInstances<T: WindowSystem + 'static> {
     instances: HashMap<WindowId, SystemState<T>>,
 }
 
