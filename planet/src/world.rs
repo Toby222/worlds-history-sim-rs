@@ -106,27 +106,27 @@ pub struct TerrainCell {
 }
 
 impl World {
-    pub(crate) const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
-    const CONTINENT_MAX_SIZE_FACTOR: f32 = 6.0;
-    const CONTINENT_MIN_SIZE_FACTOR: f32 = 2.5;
-    pub(crate) const MAX_ALTITUDE: f32 = 15000.0;
-    pub(crate) const MAX_RAINFALL: f32 = 7500.0;
-    pub(crate) const MAX_TEMPERATURE: f32 = 30.0;
-    pub(crate) const MIN_ALTITUDE: f32 = -15000.0;
-    pub(crate) const MIN_RAINFALL: f32 = 0.0;
-    pub(crate) const MIN_TEMPERATURE: f32 = -35.0;
-    const MOUNTAIN_RANGE_MIX_FACTOR: f32 = 0.075;
-    const MOUNTAIN_RANGE_WIDTH_FACTOR: f32 = 25.0;
-    const NUM_CONTINENTS: u8 = 7;
-    const RAINFALL_DRYNESS_FACTOR: f32 = 0.005;
-    const RAINFALL_DRYNESS_OFFSET: f32 = World::RAINFALL_DRYNESS_FACTOR * World::MAX_RAINFALL;
-    const RAINFALL_SPAN: f32 = World::MAX_RAINFALL - World::MIN_RAINFALL;
-    const TEMPERATURE_ALTITUDE_FACTOR: f32 = 1.0;
-    const TEMPERATURE_SPAN: f32 = World::MAX_TEMPERATURE - World::MIN_TEMPERATURE;
-    const TERRAIN_NOISE_FACTOR_1: f32 = 0.15;
-    const TERRAIN_NOISE_FACTOR_2: f32 = 0.15;
-    const TERRAIN_NOISE_FACTOR_3: f32 = 0.1;
-    const TERRAIN_NOISE_FACTOR_4: f32 = 2.5;
+    pub const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
+    pub const CONTINENT_MAX_SIZE_FACTOR: f32 = 6.0;
+    pub const CONTINENT_MIN_SIZE_FACTOR: f32 = 2.5;
+    pub const MAX_ALTITUDE: f32 = 15000.0;
+    pub const MAX_RAINFALL: f32 = 7500.0;
+    pub const MAX_TEMPERATURE: f32 = 30.0;
+    pub const MIN_ALTITUDE: f32 = -15000.0;
+    pub const MIN_RAINFALL: f32 = 0.0;
+    pub const MIN_TEMPERATURE: f32 = -35.0;
+    pub const MOUNTAIN_RANGE_MIX_FACTOR: f32 = 0.075;
+    pub const MOUNTAIN_RANGE_WIDTH_FACTOR: f32 = 25.0;
+    pub const NUM_CONTINENTS: u8 = 7;
+    pub const RAINFALL_DRYNESS_FACTOR: f32 = 0.005;
+    pub const RAINFALL_DRYNESS_OFFSET: f32 = World::RAINFALL_DRYNESS_FACTOR * World::MAX_RAINFALL;
+    pub const RAINFALL_SPAN: f32 = World::MAX_RAINFALL - World::MIN_RAINFALL;
+    pub const TEMPERATURE_ALTITUDE_FACTOR: f32 = 1.0;
+    pub const TEMPERATURE_SPAN: f32 = World::MAX_TEMPERATURE - World::MIN_TEMPERATURE;
+    pub const TERRAIN_NOISE_FACTOR_1: f32 = 0.15;
+    pub const TERRAIN_NOISE_FACTOR_2: f32 = 0.15;
+    pub const TERRAIN_NOISE_FACTOR_3: f32 = 0.1;
+    pub const TERRAIN_NOISE_FACTOR_4: f32 = 2.5;
 
     pub fn new(width: u32, height: u32, seed: u32) -> World {
         World {
@@ -326,7 +326,7 @@ impl World {
         offset: Vec3A,
     ) -> Result<f32, CartesianError> {
         let cartesian = cartesian_coordinates(alpha, beta, radius)?;
-        Ok(perlin::get_value(
+        Ok(perlin::perlin_value(
             cartesian.x + offset.x,
             cartesian.y + offset.y,
             cartesian.z + offset.z,

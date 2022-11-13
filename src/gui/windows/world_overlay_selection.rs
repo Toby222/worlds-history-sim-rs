@@ -1,12 +1,15 @@
 use {
-    crate::{gui::WindowSystem, resources::ShouldRedraw},
+    crate::{
+        gui::WindowSystem,
+        planet_renderer::{WorldOverlay, WorldRenderSettings},
+        resources::ShouldRedraw,
+    },
     bevy::ecs::{
         change_detection::Mut,
         system::{SystemParam, SystemState},
         world::World,
     },
     bevy_egui::egui::Ui,
-    planet::{WorldOverlay, WorldRenderSettings},
     std::marker::PhantomData,
 };
 

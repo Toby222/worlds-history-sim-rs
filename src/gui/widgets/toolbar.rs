@@ -12,7 +12,6 @@ use {
     bevy::{
         ecs::{
             change_detection::Mut,
-            component::Component,
             system::{SystemParam, SystemState},
             world::World,
         },
@@ -59,18 +58,18 @@ impl ToolbarButton {
 
 impl From<ToolbarButton> for &'static str {
     fn from(button: ToolbarButton) -> Self {
+        (&button).into()
+    }
+}
+
+impl From<&ToolbarButton> for &'static str {
+    fn from(button: &ToolbarButton) -> Self {
         match button {
             ToolbarButton::Views => "Change view",
             ToolbarButton::Overlays => "Overlays",
             ToolbarButton::GenerateWorld => "Generate new world",
             ToolbarButton::SaveLoad => "Save/Load",
         }
-    }
-}
-
-impl From<&ToolbarButton> for &'static str {
-    fn from(button: &ToolbarButton) -> Self {
-        (*button).into()
     }
 }
 

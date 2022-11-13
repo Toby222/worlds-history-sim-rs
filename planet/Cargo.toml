@@ -8,8 +8,7 @@ release = { strip = "symbols", lto = "thin", opt-level = "z" }
 
 [features]
 logging = []
-render = ["bevy/render"]
-default = ["render", "logging"]
+default = ["logging"]
 
 [dependencies.rand]
 version = "0.8.5"

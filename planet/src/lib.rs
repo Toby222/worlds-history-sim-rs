@@ -41,8 +41,4 @@ pub use world_manager::WorldManager;
 pub(crate) mod macros;
 pub mod math_util;
 pub mod perlin;
-#[cfg(feature = "render")]
-pub mod rendering;
-#[cfg(feature = "render")]
-pub use rendering::*;
 pub mod saving;

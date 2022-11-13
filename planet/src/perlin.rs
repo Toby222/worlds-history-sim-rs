@@ -14,7 +14,8 @@ const PERMUTATION: [u8; 256] = [
     128, 195, 78, 66, 215, 61, 156, 180,
 ];
 
-pub fn get_value(x: f32, y: f32, z: f32) -> f32 {
+#[must_use]
+pub fn perlin_value(x: f32, y: f32, z: f32) -> f32 {
     let p = [PERMUTATION, PERMUTATION].concat();
 
     let fx: i32 = f32::floor(x) as i32;
@@ -68,10 +69,12 @@ pub fn get_value(x: f32, y: f32, z: f32) -> f32 {
     ))
 }
 
+#[must_use]
 fn fade(t: f32) -> f32 {
     t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
 }
 
+#[must_use]
 fn grad(hash: u8, x: f32, y: f32, z: f32) -> f32 {
     let h = hash & 15;
     let u = if h < 8 { x } else { y };
@@ -86,10 +89,12 @@ fn grad(hash: u8, x: f32, y: f32, z: f32) -> f32 {
     (if h & 1 == 0 { u } else { -u }) + (if h & 2 == 0 { v } else { -v })
 }
 
+#[must_use]
 fn lerp(t: f32, a: f32, b: f32) -> f32 {
     a + t * (b - a)
 }
 
+#[must_use]
 fn scale(n: f32) -> f32 {
     (1.0 + n) / 2.0
 }

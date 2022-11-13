@@ -4,6 +4,8 @@ pub(crate) mod components;
 #[cfg(feature = "render")]
 pub(crate) mod gui;
 pub(crate) mod macros;
+#[cfg(feature = "render")]
+pub(crate) mod planet_renderer;
 pub(crate) mod plugins;
 #[cfg(feature = "render")]
 pub(crate) mod resources;
@@ -52,7 +54,7 @@ use {
     },
     components::panning::Pan2d,
     gui::{render_windows, widget, widgets::ToolbarWidget, window::open_window, windows::TileInfo},
-    planet::WorldRenderSettings,
+    planet_renderer::{WorldRenderSettings, WorldRenderer},
     resources::{CursorMapPosition, OpenedWindows, ShouldRedraw},
 };
 #[cfg(all(feature = "render", feature = "logging"))]
