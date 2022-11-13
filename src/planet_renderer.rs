@@ -151,9 +151,9 @@ fn coastline_color(world: &World, cell: &TerrainCell) -> Color {
     } else if cell.altitude > 0.0 {
         let slant = world.get_slant(cell);
         let altitude_span = world.max_altitude - world.min_altitude;
-        let slant_factor = f32::min(1.0, -(500.0 * (slant / altitude_span)));
+        let slant_factor = f32::min(1.0, -(20.0 * (slant / altitude_span)));
 
-        if slant_factor > 0.9 {
+        if slant_factor > 0.1 {
             COASTLINE_PALETTE[4] * slant_factor + COASTLINE_PALETTE[1] * (1.0 - slant_factor)
         } else {
             COASTLINE_PALETTE[1]

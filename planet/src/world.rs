@@ -377,7 +377,7 @@ impl World {
                 let random_noise =
                     self.random_noise_from_polar_coordinates(alpha, beta, RADIUS, offset)?;
 
-                let latitude_factor = (alpha * 0.9) + (random_noise * 0.2 * PI) - 0.1;
+                let latitude_factor = alpha + (random_noise * 2.0 - 1.0) * PI * 0.1;
                 let latitude_modifier_1 = (1.5 * f32::sin(latitude_factor)) - 0.5;
                 let latitude_modifier_2 = f32::cos(latitude_factor);
 
@@ -395,13 +395,14 @@ impl World {
                 let offset_altitude_2 = f32::max(0.0, offset_cell_2.altitude);
 
                 let cell = &mut self.terrain[y][x];
-                let altitude = f32::max(0.0, cell.altitude);
+                let altitude_value = f32::max(0.0, cell.altitude);
 
                 let altitude_modifier =
-                    (altitude - (offset_altitude * 1.5) - (offset_altitude_2 * 1.5))
+                    (altitude_value - (offset_altitude * 1.5) - (offset_altitude_2))
                         / World::MAX_ALTITUDE;
 
                 let rainfall_value = mix_values(latitude_modifier_1, altitude_modifier, 0.63);
+                let rainfall_value = mix_values(rainfall_value.powi(2), rainfall_value, 0.85);
                 let rainfall = f32::min(
                     World::MAX_RAINFALL,
                     World::calculate_rainfall(rainfall_value),
