@@ -16,6 +16,7 @@ macro_rules! iterable_enum {
         }
     }
 }
+#[cfg(feature = "render")]
 macro_rules! iterable_enum_stringify {
     ($Name:ident { $($Variant:ident),*$(,)? }) =>
     {
@@ -38,4 +39,5 @@ macro_rules! iterable_enum_stringify {
 }
 #[cfg(feature = "render")]
 pub(crate) use iterable_enum;
+#[cfg(feature = "render")]
 pub(crate) use iterable_enum_stringify;

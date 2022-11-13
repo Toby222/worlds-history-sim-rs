@@ -631,6 +631,56 @@ impl World {
         west_altitude - east_altitude
     }
 
+    pub fn is_cell_near_coastline(&self, cell: &TerrainCell) -> bool {
+        if cell.altitude >= 0.0 {
+            return false;
+        }
+
+        let neighbors = self.cell_neighbors(cell.x, cell.y);
+
+        if let Some(neighbor) = neighbors.get(&CompassDirection::West) {
+            if neighbor.altitude >= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::NorthWest) {
+            if neighbor.altitude >= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::North) {
+            if neighbor.altitude >= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::NorthEast) {
+            if neighbor.altitude >= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::East) {
+            if neighbor.altitude >= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::SouthEast) {
+            if neighbor.altitude >= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::South) {
+            if neighbor.altitude >= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::SouthWest) {
+            if neighbor.altitude >= 0.0 {
+                return true;
+            }
+        }
+        return false;
+    }
+
     #[must_use]
     pub fn is_cell_coastline(&self, cell: &TerrainCell) -> bool {
         if cell.altitude <= 0.0 {

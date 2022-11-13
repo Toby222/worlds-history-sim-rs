@@ -1,8 +1,3 @@
-#[cfg(feature = "render")]
-use {
-    crate::{BiomeStats, TerrainCell, WorldOverlay, WorldRenderSettings, WorldView},
-    bevy::render::color::Color,
-};
 use {
     crate::{World, WorldGenError},
     bevy::{log::warn, utils::default},
