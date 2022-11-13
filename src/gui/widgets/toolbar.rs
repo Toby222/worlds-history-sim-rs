@@ -34,7 +34,7 @@ impl ToolbarButton {
         world.resource_scope(|world, mut world_manager: Mut<'_, WorldManager>| {
             match self {
                 ToolbarButton::GenerateWorld => {
-                    if let Err(err) = world_manager.new_world() {
+                    if let Err(err) = world_manager.new_world(None) {
                         eprintln!("Failed to generate world: {}", err);
                     } else {
                         world.resource_mut::<ShouldRedraw>().0 = true;

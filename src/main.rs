@@ -252,7 +252,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut manager = WorldManager::new();
     #[cfg(feature = "render")]
     {
-        let world = manager.new_world()?;
+        let world = manager.new_world(None)?;
         _ = app
             .insert_resource(WinitSettings::game())
             // Use nearest-neighbor rendering for cripsier pixels

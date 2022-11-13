@@ -160,8 +160,8 @@ impl WorldManager {
         self.get_world().unwrap()
     }
 
-    pub fn new_world(&mut self) -> Result<&World, WorldGenError> {
-        let seed = random();
+    pub fn new_world(&mut self, seed: Option<u32>) -> Result<&World, WorldGenError> {
+        let seed = seed.unwrap_or_else(random);
         let mut new_world = World::new(400, 200, seed);
         new_world.generate()?;
         self.world = Some(new_world);
