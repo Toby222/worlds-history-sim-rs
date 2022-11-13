@@ -596,15 +596,15 @@ impl World {
         let mut west_altitude = 0.0;
         let mut neighbor_count = 0u8;
 
-        if let Some(neighbor) = neighbors.get(&CompassDirection::North) {
-            west_altitude = f32::max(west_altitude, neighbor.altitude);
-            neighbor_count += 1;
-        }
-        if let Some(neighbor) = neighbors.get(&CompassDirection::NorthWest) {
-            west_altitude = f32::max(west_altitude, neighbor.altitude);
-            neighbor_count += 1;
-        }
         if let Some(neighbor) = neighbors.get(&CompassDirection::West) {
+            west_altitude = f32::max(west_altitude, neighbor.altitude);
+            neighbor_count += 1;
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::SouthWest) {
+            west_altitude = f32::max(west_altitude, neighbor.altitude);
+            neighbor_count += 1;
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::South) {
             west_altitude = f32::max(west_altitude, neighbor.altitude);
             neighbor_count += 1;
         }
@@ -613,15 +613,15 @@ impl World {
         neighbor_count = 0;
 
         let mut east_altitude = f32::MIN;
+        if let Some(neighbor) = neighbors.get(&CompassDirection::East) {
+            east_altitude = f32::max(east_altitude, neighbor.altitude);
+            neighbor_count += 1;
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::NorthEast) {
+            east_altitude = f32::max(east_altitude, neighbor.altitude);
+            neighbor_count += 1;
+        }
         if let Some(neighbor) = neighbors.get(&CompassDirection::North) {
-            east_altitude = f32::max(east_altitude, neighbor.altitude);
-            neighbor_count += 1;
-        }
-        if let Some(neighbor) = neighbors.get(&CompassDirection::NorthWest) {
-            east_altitude = f32::max(east_altitude, neighbor.altitude);
-            neighbor_count += 1;
-        }
-        if let Some(neighbor) = neighbors.get(&CompassDirection::West) {
             east_altitude = f32::max(east_altitude, neighbor.altitude);
             neighbor_count += 1;
         }
@@ -629,5 +629,56 @@ impl World {
         east_altitude /= f32::from(neighbor_count);
 
         west_altitude - east_altitude
+    }
+
+    #[must_use]
+    pub fn is_cell_coastline(&self, cell: &TerrainCell) -> bool {
+        if cell.altitude <= 0.0 {
+            return false;
+        }
+
+        let neighbors = self.cell_neighbors(cell.x, cell.y);
+
+        if let Some(neighbor) = neighbors.get(&CompassDirection::West) {
+            if neighbor.altitude <= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::NorthWest) {
+            if neighbor.altitude <= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::North) {
+            if neighbor.altitude <= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::NorthEast) {
+            if neighbor.altitude <= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::East) {
+            if neighbor.altitude <= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::SouthEast) {
+            if neighbor.altitude <= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::South) {
+            if neighbor.altitude <= 0.0 {
+                return true;
+            }
+        }
+        if let Some(neighbor) = neighbors.get(&CompassDirection::SouthWest) {
+            if neighbor.altitude <= 0.0 {
+                return true;
+            }
+        }
+        return false;
     }
 }

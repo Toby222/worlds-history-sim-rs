@@ -4,7 +4,11 @@ use {
     planet::{BiomeStats, TerrainCell, World, WorldManager},
 };
 
-iterable_enum_stringify!(WorldView { Biomes, Topography });
+iterable_enum_stringify!(WorldView {
+    Biomes,
+    Topography,
+    Coastlines
+});
 iterable_enum_stringify!(WorldOverlay {
     Temperature,
     Rainfall
@@ -104,6 +108,17 @@ fn biome_color(world: &World, cell: &TerrainCell) -> Color {
     blue *= slant_factor * altitude_factor;
     Color::rgb(red, green, blue)
 }
+
+#[must_use]
+fn coastline_color(world: &World, cell: &TerrainCell) -> Color {
+    if world.is_cell_coastline(cell) {
+        Color::BLACK
+    } else if cell.altitude > 0.0 {
+        Color::rgb(0.75, 0.75, 0.75)
+    } else {
+        Color::ANTIQUE_WHITE
+    }
+}
 pub(crate) trait WorldRenderer {
     fn map_color_bytes(&self, render_settings: &WorldRenderSettings) -> Vec<u8>;
     fn generate_color(&self, cell: &TerrainCell, render_settings: &WorldRenderSettings) -> Color;
@@ -131,6 +146,7 @@ impl WorldRenderer for WorldManager {
         let base_color = match render_settings.view {
             WorldView::Biomes => biome_color(&self.world(), cell),
             WorldView::Topography => altitude_contour_color(cell.altitude),
+            WorldView::Coastlines => coastline_color(&self.world(), cell),
         };
         let mut normalizer = 1.0;
 
