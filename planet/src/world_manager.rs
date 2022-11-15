@@ -6,6 +6,7 @@ use {
         tasks::{AsyncComputeTaskPool, Task},
         utils::default,
     },
+    crossbeam_channel::Sender,
     rand::random,
     std::{
         error::Error,
@@ -99,7 +100,6 @@ impl WorldManager {
             return Err(SaveError::MissingWorld);
         };
 
-        
         let serialized = match postcard::to_stdvec(world) {
             Ok(serialized) => serialized,
             Err(err) => {
@@ -124,7 +124,7 @@ impl WorldManager {
         if let Err(err) = file.read_to_end(&mut buf) {
             return Err(LoadError::MissingSave(err));
         };
-        
+
         match postcard::from_bytes(buf.as_slice()) {
             Ok(world) => {
                 self.world = Some(world);
@@ -139,11 +139,15 @@ impl WorldManager {
         self.world.as_ref()
     }
 
-        pub fn set_world(&mut self, world: World) {
+    pub fn set_world(&mut self, world: World) {
         self.world = Some(world);
     }
 
-    pub fn new_world_async(&mut self, seed: Option<u32>) -> Task<Result<World, WorldGenError>> {
+    pub fn new_world_async(
+        &mut self,
+        seed: Option<u32>,
+        progress_sender: Sender<(f32, String)>,
+    ) -> Task<Result<World, WorldGenError>> {
         AsyncComputeTaskPool::get().spawn(async move {
             let seed = seed.unwrap_or_else(random);
             let mut new_world = World::async_new(
@@ -151,7 +155,18 @@ impl WorldManager {
                 WorldManager::NEW_WORLD_HEIGHT,
                 seed,
             );
-            match new_world.generate() {
+            if let Err(_) =
+                progress_sender.try_send((0.0, String::from("Generating new world...")))
+            {
+                // Quietly ignore. It's not critical and logging is slow.
+            }
+            let result = new_world.generate(&progress_sender);
+            if let Err(_) =
+                progress_sender.try_send((1.0, String::from("Done generating world!")))
+            {
+                // Quietly ignore. See above
+            }
+            match result {
                 Ok(()) => Ok(new_world),
                 Err(err) => Err(err),
             }

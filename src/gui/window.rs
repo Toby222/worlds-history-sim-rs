@@ -16,13 +16,13 @@ use {
     std::hash::Hasher,
 };
 
-pub(crate) trait WindowSystem: SystemParam {
+pub trait WindowSystem: SystemParam {
     fn draw_contents(world: &mut World, state: &mut SystemState<Self>, ui: &mut Ui);
     fn name() -> &'static str;
     fn resizable() -> bool;
 }
 
-pub(crate) fn render_windows(world: &mut World, ctx: &Context) {
+pub fn render_windows(world: &mut World, ctx: &Context) {
     // TODO: Windows are hard-coded here instead of being iterable, and allows
     // creating new windows that are never rendered.
     // Is that good enough?
@@ -32,10 +32,10 @@ pub(crate) fn render_windows(world: &mut World, ctx: &Context) {
     window::<windows::SaveLoad>(world, ctx);
 }
 
-pub(crate) fn open_window<S: 'static + WindowSystem>(windows: &mut OpenedWindows) {
+pub fn open_window<S: 'static + WindowSystem>(windows: &mut OpenedWindows) {
     windows.open(S::name().into());
 }
-pub(crate) fn close_window<S: 'static + WindowSystem>(windows: &mut OpenedWindows) {
+pub fn close_window<S: 'static + WindowSystem>(windows: &mut OpenedWindows) {
     windows.close(&S::name().into());
 }
 
@@ -87,10 +87,10 @@ struct StateInstances<T: WindowSystem + 'static> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct WindowId(pub(crate) u64);
+pub struct WindowId(pub u64);
 impl WindowId {
     #[must_use]
-    pub(crate) fn new(name: &str) -> Self {
+    pub fn new(name: &str) -> Self {
         let bytes = name.as_bytes();
         let mut hasher = FxHasher32::default();
         hasher.write(bytes);
@@ -98,7 +98,7 @@ impl WindowId {
     }
 
     // #[must_use]
-    // pub(crate) fn with(&self, name: &str) -> Self {
+    // pub fn with(&self, name: &str) -> Self {
     //     Self::new(&format!("{}{name}", self.0))
     // }
 }

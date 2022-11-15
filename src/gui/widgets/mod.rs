@@ -1,2 +1,2 @@
 mod toolbar;
-pub(crate) use toolbar::ToolbarWidget;
+pub use toolbar::ToolbarWidget;

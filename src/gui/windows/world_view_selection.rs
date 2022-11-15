@@ -14,7 +14,7 @@ use {
 };
 
 #[derive(SystemParam)]
-pub(crate) struct WorldViewSelection<'w, 's> {
+pub struct WorldViewSelection<'w, 's> {
     #[system_param(ignore)]
     _phantom: PhantomData<(&'w (), &'s ())>,
 }

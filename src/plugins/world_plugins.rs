@@ -1,4 +1,4 @@
-pub(crate) struct WorldPlugins;
+pub struct WorldPlugins;
 
 #[cfg(not(feature = "render"))]
 use bevy::app::ScheduleRunnerPlugin;

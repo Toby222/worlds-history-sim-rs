@@ -2,14 +2,15 @@
 use {crate::gui::WindowId, bevy::utils::HashSet, std::fmt::Display};
 use {
     bevy::{prelude::Resource, tasks::Task},
+    crossbeam_channel::{bounded, Receiver, Sender},
     planet::{World, WorldGenError},
 };
 
 #[cfg(feature = "render")]
 #[derive(Default, Debug, Resource)]
-pub(crate) struct CursorMapPosition {
-    pub(crate) x: i32,
-    pub(crate) y: i32,
+pub struct CursorMapPosition {
+    pub x: i32,
+    pub y: i32,
 }
 #[cfg(feature = "render")]
 impl Display for CursorMapPosition {
@@ -20,27 +21,53 @@ impl Display for CursorMapPosition {
 
 #[cfg(feature = "render")]
 #[derive(Resource, Default)]
-pub(crate) struct ShouldRedraw(pub(crate) bool);
+pub struct ShouldRedraw(pub bool);
 #[cfg(feature = "render")]
 #[derive(Default, Resource)]
-pub(crate) struct OpenedWindows(HashSet<WindowId>);
+pub struct OpenedWindows(HashSet<WindowId>);
 
 #[cfg(feature = "render")]
 impl OpenedWindows {
-    pub(crate) fn open(&mut self, id: WindowId) {
+    pub fn open(&mut self, id: WindowId) {
         // Ignore opening already opened windows
         _ = self.0.insert(id);
     }
 
-    pub(crate) fn close(&mut self, id: &WindowId) {
+    pub fn close(&mut self, id: &WindowId) {
         // Ignore closing already closed windows
         _ = self.0.remove(id);
     }
 
-    pub(crate) fn is_open(&self, id: &WindowId) -> bool {
+    pub fn is_open(&self, id: &WindowId) -> bool {
         self.0.contains(id)
     }
 }
 
+#[derive(Resource)]
+pub struct GenerateWorldProgressChannel(Sender<(f32, String)>, Receiver<(f32, String)>);
+
+impl GenerateWorldProgressChannel {
+    pub fn new() -> Self {
+        bounded(1).into()
+    }
+
+    pub fn sender(&self) -> Sender<(f32, String)> {
+        self.0.clone()
+    }
+
+    pub fn receiver(&self) -> &Receiver<(f32, String)> {
+        &self.1
+    }
+}
+impl Default for GenerateWorldProgressChannel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl From<(Sender<(f32, String)>, Receiver<(f32, String)>)> for GenerateWorldProgressChannel {
+    fn from(value: (Sender<(f32, String)>, Receiver<(f32, String)>)) -> Self {
+        Self(value.0, value.1)
+    }
+}
 #[derive(Default, Resource)]
 pub struct GenerateWorldTask(pub Option<Task<Result<World, WorldGenError>>>);

@@ -3,23 +3,24 @@
 use {
     crate::resources::GenerateWorldTask,
     futures_lite::future::{block_on, poll_once},
+    resources::GenerateWorldProgressChannel,
 };
 
-pub(crate) mod components;
+pub mod components;
 #[cfg(feature = "render")]
-pub(crate) mod gui;
-pub(crate) mod macros;
+pub mod gui;
+pub mod macros;
 #[cfg(feature = "render")]
-pub(crate) mod planet_renderer;
-pub(crate) mod plugins;
-pub(crate) mod resources;
+pub mod planet_renderer;
+pub mod plugins;
+pub mod resources;
 
 use {bevy::prelude::*, planet::WorldManager, plugins::WorldPlugins};
 #[cfg(feature = "render")]
 use {
     bevy::render::camera::RenderTarget,
     bevy_egui::{
-        egui::{FontData, FontDefinitions, FontFamily},
+        egui::{FontData, FontDefinitions, FontFamily, ProgressBar},
         EguiContext,
     },
     gui::{render_windows, widget, widgets::ToolbarWidget, window::open_window, windows::TileInfo},
@@ -73,6 +74,9 @@ fn handle_generate_world_task(
     mut generate_world_task: ResMut<GenerateWorldTask>,
     mut world_manager: ResMut<WorldManager>,
     #[cfg(feature = "render")] mut should_redraw: ResMut<ShouldRedraw>,
+    #[cfg(feature = "render")] mut egui_ctx: ResMut<'_, EguiContext>,
+    #[cfg(feature = "render")] progress_channel: Res<'_, GenerateWorldProgressChannel>,
+    #[cfg(feature = "render")] mut progress: Local<(f32, String)>,
 ) {
     if let Some(task) = &mut generate_world_task.0 {
         if task.is_finished() {
@@ -92,8 +96,24 @@ fn handle_generate_world_task(
                 }
             }
             generate_world_task.0 = None;
+            #[cfg(feature = "render")]
+            {
+                *progress = (0.0, String::from("Generating world..."));
+            }
         } else {
-            debug!("Still generating world")
+            debug!("Still generating world");
+
+            #[cfg(feature = "render")]
+            {
+                if let Ok(new_progress) = progress_channel.receiver().try_recv() {
+                    *progress = new_progress;
+                }
+                _ = bevy_egui::egui::TopBottomPanel::bottom("Generating World ProgressBar")
+                    .default_height(8.0)
+                    .show(egui_ctx.ctx_mut(), |ui| {
+                        ui.add(ProgressBar::new(progress.0).text(progress.1.as_str()));
+                    });
+            }
         }
     }
 }
@@ -293,9 +313,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     app.insert_resource(WorldManager::new())
-        .insert_resource(GenerateWorldTask(
-            /* Some(manager.new_world_async(Some(0))) */ None,
-        ))
+        .insert_resource(GenerateWorldProgressChannel::new())
+        .insert_resource(GenerateWorldTask(None))
         .add_system(handle_generate_world_task)
         .run();
 

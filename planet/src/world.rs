@@ -17,6 +17,7 @@ use {
         prelude::Vec2,
         utils::{default, HashMap},
     },
+    crossbeam_channel::Sender,
     rand::{rngs::StdRng, Rng, SeedableRng},
     serde::{Deserialize, Serialize},
     std::{
@@ -169,18 +170,25 @@ impl World {
         }
     }
 
-    pub fn generate(&mut self) -> Result<(), WorldGenError> {
-        if let Err(err) = self.generate_altitude() {
+    pub fn generate(
+        &mut self,
+        progress_sender: &Sender<(f32, String)>,
+    ) -> Result<(), WorldGenError> {
+        send_progress(progress_sender, 0.0, "Generating altitude");
+        if let Err(err) = self.generate_altitude(progress_sender) {
             return Err(WorldGenError::CartesianError(err));
         }
-        if let Err(err) = self.generate_rainfall() {
+        send_progress(progress_sender, 0.0, "Generating rainfall");
+        if let Err(err) = self.generate_rainfall(progress_sender) {
             return Err(WorldGenError::CartesianError(err));
         }
-        if let Err(err) = self.generate_temperature() {
+        send_progress(progress_sender, 0.0, "Generating temperature");
+        if let Err(err) = self.generate_temperature(progress_sender) {
             return Err(WorldGenError::CartesianError(err));
         }
 
-        self.generate_biomes();
+        send_progress(progress_sender, 0.0, "Generating biomes");
+        self.generate_biomes(progress_sender);
 
         Ok(())
     }
@@ -192,8 +200,8 @@ impl World {
         let height = self.height as f32;
 
         for i in 0..World::NUM_CONTINENTS {
-            #[cfg(feature = "logging")]
-            info!("Continents {}/{}", i, World::NUM_CONTINENTS);
+            // #[cfg(feature = "logging")]
+            // info!("Continents: {}/{}", i, World::NUM_CONTINENTS);
 
             self.continent_offsets[i as usize].x = self
                 .rng
@@ -254,7 +262,10 @@ impl World {
         max_value
     }
 
-    fn generate_altitude(&mut self) -> Result<(), CartesianError> {
+    fn generate_altitude(
+        &mut self,
+        progress_sender: &Sender<(f32, String)>,
+    ) -> Result<(), CartesianError> {
         info!("Generating altitude");
         self.generate_continents();
 
@@ -270,13 +281,20 @@ impl World {
         let offset_4 = World::random_offset_vector(&mut self.rng);
         let offset_5 = World::random_offset_vector(&mut self.rng);
 
-        for y in 0..self.terrain.len() {
-            #[cfg(feature = "logging")]
-            info!("Altitude: {}/{}", y, self.terrain.len());
-
+        let height = self.terrain.len();
+        for y in 0..height {
             let alpha = (y as f32 / self.height as f32) * PI;
 
-            for x in 0..self.terrain[y].len() {
+            let width = self.terrain[y].len();
+            let size = height * width;
+            for x in 0..width {
+                let index = y * width + x;
+                send_progress(
+                    progress_sender,
+                    index as f32 / size as f32,
+                    format!("Generating topography: {index}/{size}"),
+                );
+
                 let beta = (x as f32 / self.width as f32) * TAU;
 
                 let value_1 =
@@ -385,20 +403,27 @@ impl World {
         World::MIN_ALTITUDE + (raw_altitude * World::ALTITUDE_SPAN)
     }
 
-    fn generate_rainfall(&mut self) -> Result<(), CartesianError> {
-        #[cfg(feature = "logging")]
+    fn generate_rainfall(
+        &mut self,
+        progress_sender: &Sender<(f32, String)>,
+    ) -> Result<(), CartesianError> {
         info!("Generating rainfall");
         const RADIUS: f32 = 2.0;
         let offset = World::random_offset_vector(&mut self.rng);
 
         let height = self.terrain.len();
         for y in 0..height {
-            #[cfg(feature = "logging")]
-            info!("Rainfall: {}/{}", y, height);
             let alpha = (y as f32 / self.height as f32) * PI;
 
             let width = self.terrain[y].len();
+            let size = width * height;
             for x in 0..width {
+                let index = y * width + x;
+                send_progress(
+                    progress_sender,
+                    index as f32 / size as f32,
+                    format!("Generating rainfall: {index}/{size}"),
+                );
                 let beta = (x as f32 / self.width as f32) * TAU;
 
                 let random_noise =
@@ -459,17 +484,28 @@ impl World {
         )
     }
 
-    fn generate_temperature(&mut self) -> Result<(), CartesianError> {
-        #[cfg(feature = "logging")]
+    fn generate_temperature(
+        &mut self,
+        progress_sender: &Sender<(f32, String)>,
+    ) -> Result<(), CartesianError> {
         info!("Generating temperature");
         let offset = World::random_offset_vector(&mut self.rng);
         const RADIUS: f32 = 2.0;
 
-        for y in 0..self.terrain.len() {
-            #[cfg(feature = "logging")]
-            info!("Temperature: {}/{}", y, self.terrain.len());
+        let height = self.terrain.len();
+        for y in 0..height {
             let alpha = (y as f32 / self.height as f32) * PI;
-            for x in 0..self.terrain[y].len() {
+
+            let width = self.terrain[y].len();
+            let size = width * height;
+            for x in 0..width {
+                let index = y * width + x;
+                send_progress(
+                    progress_sender,
+                    index as f32 / size as f32,
+                    format!("Generating temperature: {index}/{size}"),
+                );
+
                 let beta = (x as f32 / self.width as f32) * TAU;
 
                 let random_noise =
@@ -496,6 +532,7 @@ impl World {
             }
         }
 
+        info!("Done generating temperature");
         Ok(())
     }
 
@@ -507,12 +544,19 @@ impl World {
         )
     }
 
-    fn generate_biomes(&mut self) {
+    fn generate_biomes(&mut self, progress_sender: &Sender<(f32, String)>) {
         info!("Generating biomes");
-        for y in 0..self.terrain.len() {
-            #[cfg(feature = "logging")]
-            info!("Biomes: {}/{}", y, self.terrain.len());
-            for x in 0..self.terrain[y].len() {
+        let height = self.terrain.len();
+        for y in 0..height {
+            let width = self.terrain[y].len();
+            let size = height * width;
+            for x in 0..width {
+                let index = y * width + x;
+                send_progress(
+                    progress_sender,
+                    index as f32 / size as f32,
+                    format!("Generating biomes: {index}/{size}"),
+                );
                 let cell = &self.terrain[y][x];
 
                 let mut total_presence = 0.0;
@@ -534,6 +578,7 @@ impl World {
                     .collect();
             }
         }
+        info!("Done generating biomes");
     }
 
     fn biome_presence(&self, cell: &TerrainCell, biome: &BiomeStats) -> f32 {
@@ -765,5 +810,17 @@ impl World {
             }
         }
         return false;
+    }
+}
+
+fn send_progress<T: Into<String>>(
+    progress_sender: &Sender<(f32, String)>,
+    progress: f32,
+    progress_text: T,
+) {
+    if let Err(_) = progress_sender.try_send((progress, progress_text.into())) {
+        // Quietly ignore the error, it's not critical, and logging is slow.
+
+        // debug!("Failed to send world generation progress. {err}");
     }
 }

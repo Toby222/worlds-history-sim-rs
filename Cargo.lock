@@ -2087,6 +2087,7 @@ name = "planet"
 version = "0.3.0"
 dependencies = [
  "bevy",
+ "crossbeam-channel",
  "postcard",
  "rand",
  "serde",
@@ -3087,6 +3088,7 @@ version = "0.3.0"
 dependencies = [
  "bevy",
  "bevy_egui",
+ "crossbeam-channel",
  "futures-lite",
  "fxhash",
  "planet",

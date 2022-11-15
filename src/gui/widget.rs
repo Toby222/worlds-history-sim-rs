@@ -14,11 +14,11 @@ use {
     std::hash::Hasher,
 };
 
-pub(crate) trait WidgetSystem: SystemParam {
+pub trait WidgetSystem: SystemParam {
     fn render(world: &mut World, state: &mut SystemState<Self>, ui: &mut Ui, id: WidgetId);
 }
 
-pub(crate) fn widget<S: 'static + WidgetSystem>(world: &mut World, ui: &mut Ui, id: WidgetId) {
+pub fn widget<S: 'static + WidgetSystem>(world: &mut World, ui: &mut Ui, id: WidgetId) {
     // We need to cache `SystemState` to allow for a system's locally tracked state
     if !world.contains_resource::<StateInstances<S>>() {
         // Note, this message should only appear once! If you see it twice in the logs,
@@ -51,10 +51,10 @@ struct StateInstances<T: WidgetSystem + 'static> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct WidgetId(pub(crate) u64);
+pub struct WidgetId(pub u64);
 impl WidgetId {
     #[must_use]
-    pub(crate) fn new(name: &str) -> Self {
+    pub fn new(name: &str) -> Self {
         let bytes = name.as_bytes();
         let mut hasher = FxHasher32::default();
         hasher.write(bytes);
@@ -62,7 +62,7 @@ impl WidgetId {
     }
 
     // #[must_use]
-    // pub(crate) fn with(&self, name: &str) -> Self {
+    // pub fn with(&self, name: &str) -> Self {
     //     Self::new(&format!("{}{name}", self.0))
     // }
 }

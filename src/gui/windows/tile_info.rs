@@ -10,7 +10,7 @@ use {
 };
 
 #[derive(SystemParam)]
-pub(crate) struct TileInfo<'w, 's> {
+pub struct TileInfo<'w, 's> {
     #[system_param(ignore)]
     _phantom: PhantomData<(&'w (), &'s ())>,
 }

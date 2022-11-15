@@ -7,7 +7,7 @@ use {
             WidgetSystem,
         },
         macros::iterable_enum,
-        resources::{GenerateWorldTask, OpenedWindows},
+        resources::{GenerateWorldProgressChannel, GenerateWorldTask, OpenedWindows},
     },
     bevy::{
         ecs::{
@@ -34,11 +34,13 @@ impl ToolbarButton {
         world.resource_scope(|world, mut world_manager: Mut<WorldManager>| {
             match self {
                 ToolbarButton::GenerateWorld => {
+                    let progress_sender = world.resource::<GenerateWorldProgressChannel>().sender();
                     let generate_world_task = &mut world.resource_mut::<GenerateWorldTask>();
                     if generate_world_task.0.is_some() {
                         debug!("Already generating new world")
                     } else {
-                        generate_world_task.0 = Some(world_manager.new_world_async(None))
+                        generate_world_task.0 =
+                            Some(world_manager.new_world_async(None, progress_sender))
                     }
                 },
                 ToolbarButton::SaveLoad => {
@@ -87,7 +89,7 @@ impl From<&ToolbarButton> for String {
 }
 
 #[derive(SystemParam)]
-pub(crate) struct ToolbarWidget<'w, 's> {
+pub struct ToolbarWidget<'w, 's> {
     #[system_param(ignore)]
     _phantom: PhantomData<(&'w (), &'s ())>,
 }

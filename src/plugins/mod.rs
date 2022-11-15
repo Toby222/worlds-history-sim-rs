@@ -1,2 +1,2 @@
-pub(crate) mod world_plugins;
-pub(crate) use world_plugins::WorldPlugins;
+pub mod world_plugins;
+pub use world_plugins::WorldPlugins;

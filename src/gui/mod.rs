@@ -1,9 +1,9 @@
-pub(crate) mod widget;
-pub(crate) use widget::*;
-pub(crate) mod window;
-pub(crate) use window::*;
+pub mod widget;
+pub use widget::*;
+pub mod window;
+pub use window::*;
 
-pub(crate) mod widgets;
-pub(crate) mod windows;
+pub mod widgets;
+pub mod windows;
 
 use crate::gui::{open_window, WidgetId, WidgetSystem};

@@ -14,7 +14,7 @@ use {
 };
 
 #[derive(SystemParam)]
-pub(crate) struct SaveLoad<'w, 's> {
+pub struct SaveLoad<'w, 's> {
     pub file_name: Local<'s, String>,
     #[system_param(ignore)]
     _phantom:      PhantomData<(&'w (), &'s ())>,

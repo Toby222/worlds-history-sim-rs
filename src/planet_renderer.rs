@@ -166,7 +166,7 @@ fn coastline_color(world: &World, cell: &TerrainCell) -> Color {
         COASTLINE_PALETTE[0]
     }
 }
-pub(crate) trait WorldRenderer {
+pub trait WorldRenderer {
     fn map_color_bytes(&self, render_settings: &WorldRenderSettings) -> Vec<u8>;
     fn generate_color(&self, cell: &TerrainCell, render_settings: &WorldRenderSettings) -> Color;
 }

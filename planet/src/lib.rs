@@ -4,7 +4,7 @@ pub mod biome;
 pub use biome::{BiomeStats, BiomeType};
 pub mod world_manager;
 pub use world_manager::WorldManager;
-pub(crate) mod macros;
+pub mod macros;
 pub mod math_util;
 pub mod perlin;
 pub mod saving;
