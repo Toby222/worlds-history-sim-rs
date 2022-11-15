@@ -65,9 +65,7 @@ jobs:
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: nightly
-          override: true
           target: ${{ matrix.target }}
 
       - name: Install linux dependencies
