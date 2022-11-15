@@ -19,7 +19,7 @@ use {
 #[derive(Debug)]
 pub enum LoadError {
     MissingSave(io::Error),
-    InvalidSave(ron::error::SpannedError),
+    InvalidSave(postcard::Error),
 }
 impl Error for LoadError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
@@ -49,7 +49,7 @@ impl Display for LoadError {
 #[derive(Debug)]
 pub enum SaveError {
     MissingWorld,
-    SerializationError(ron::Error),
+    SerializationError(postcard::Error),
     FailedToWrite(io::Error),
 }
 impl Error for SaveError {
@@ -94,30 +94,20 @@ impl WorldManager {
     }
 
     pub fn save_world<P: AsRef<Path>>(&self, path: P) -> Result<(), SaveError> {
-        let world = match self.get_world() {
-            Some(world) => world,
-            None => {
-                warn!("No world to save");
-                return Err(SaveError::MissingWorld);
-            },
+        let Some(world) = self.get_world() else {
+            warn!("No world to save");
+            return Err(SaveError::MissingWorld);
         };
-        #[cfg(feature = "logging")]
-        let serialized = match ron::ser::to_string_pretty(world, default()) {
+
+        
+        let serialized = match postcard::to_stdvec(world) {
             Ok(serialized) => serialized,
             Err(err) => {
                 return Err(SaveError::SerializationError(err));
             },
         };
 
-        #[cfg(not(feature = "logging"))]
-        let serialized = match ron::to_string(world) {
-            Ok(serialized) => serialized,
-            Err(err) => {
-                return Err(SaveError::SerializationError(err));
-            },
-        };
-
-        match File::create(path).unwrap().write_all(serialized.as_bytes()) {
+        match File::create(path).unwrap().write_all(serialized.as_slice()) {
             Ok(_) => Ok(()),
             Err(err) => Err(SaveError::FailedToWrite(err)),
         }
@@ -130,14 +120,12 @@ impl WorldManager {
                 return Err(LoadError::MissingSave(err));
             },
         };
-        let mut buf = String::new();
-        match file.read_to_string(&mut buf) {
-            Ok(_) => {},
-            Err(err) => {
-                return Err(LoadError::MissingSave(err));
-            },
+        let mut buf = vec![];
+        if let Err(err) = file.read_to_end(&mut buf) {
+            return Err(LoadError::MissingSave(err));
         };
-        match ron::from_str(buf.as_str()) {
+        
+        match postcard::from_bytes(buf.as_slice()) {
             Ok(world) => {
                 self.world = Some(world);
                 Ok(())
@@ -145,17 +133,6 @@ impl WorldManager {
             Err(err) => Err(LoadError::InvalidSave(err)),
         }
     }
-
-    // #[cfg(feature = "render")]
-    // pub fn toggle_contours(&mut self) {
-    //     #[cfg(feature = "logging")]
-    //     if self.contours {
-    //         debug!("Turning terrain contours off");
-    //     } else {
-    //         debug!("Turning terrain contours on");
-    //     }
-    //     self.contours = !self.contours;
-    // }
 
     #[must_use]
     pub fn get_world(&self) -> Option<&World> {
