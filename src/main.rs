@@ -42,6 +42,9 @@ fn update_cursor_map_position(
     windows: Res<'_, Windows>,
     world_manager: Res<'_, WorldManager>,
 ) {
+    let Some(world) = world_manager.get_world() else {
+        return
+    };
     let (camera, transform) = transform.single();
 
     let window = match camera.target {
@@ -61,7 +64,6 @@ fn update_cursor_map_position(
         let world_position =
             ndc_to_world.project_point3(ndc.extend(-1.0)).truncate() / WORLD_SCALE as f32;
 
-        let world = world_manager.world();
         cursor_map_position.x = world.width as i32 / 2 + f32::ceil(world_position.x) as i32 - 1;
         cursor_map_position.y = world.height as i32 / 2 + f32::ceil(world_position.y) as i32 - 1;
     }
@@ -74,7 +76,7 @@ fn handle_generate_world_task(
 ) {
     if let Some(task) = &mut generate_world_task.0 {
         if task.is_finished() {
-            debug!("Done");
+            debug!("Done generating world");
             if let Some(result) = block_on(poll_once(task)) {
                 match result {
                     Ok(world) => {
@@ -82,6 +84,8 @@ fn handle_generate_world_task(
                         #[cfg(feature = "render")]
                         {
                             should_redraw.0 = true;
+                            #[cfg(feature = "logging")]
+                            debug!("Requesting map redraw");
                         }
                     },
                     Err(err) => error!("{err:#?}"),
@@ -89,7 +93,7 @@ fn handle_generate_world_task(
             }
             generate_world_task.0 = None;
         } else {
-            debug!("Working")
+            debug!("Still generating world")
         }
     }
 }
@@ -97,13 +101,11 @@ fn handle_generate_world_task(
 #[cfg(feature = "render")]
 fn generate_graphics(
     mut commands: Commands<'_, '_>,
-    world_manager: ResMut<'_, WorldManager>,
     images: ResMut<'_, Assets<Image>>,
     egui_context: ResMut<'_, EguiContext>,
     render_settings: ResMut<'_, WorldRenderSettings>,
 ) {
     // Add Julia-Mono font to egui
-
     {
         let egui_context = egui_context.into_inner();
         let ctx = egui_context.ctx_mut();
@@ -126,19 +128,15 @@ fn generate_graphics(
         ctx.set_fonts(fonts);
 
         let mut style = (*ctx.style()).clone();
+        // Make all text 33% bigger because I have bad eyes (and the font is small)
         for style in style.text_styles.iter_mut() {
             style.1.size *= 16.0 / 12.0;
         }
         ctx.set_style(style);
-        #[cfg(feature = "logging")]
-        debug!("Fonts: {:#?}", &ctx.style().text_styles);
+        // #[cfg(feature = "logging")]
+        // debug!("Fonts: {:#?}", &ctx.style().text_styles);
     }
 
-    let world = world_manager.world();
-    let custom_sprite_size = Vec2 {
-        x: (WORLD_SCALE * world.width as i32) as f32,
-        y: (WORLD_SCALE * world.height as i32) as f32,
-    };
     // Set up 2D map mode
     {
         use bevy::render::render_resource::{
@@ -150,7 +148,7 @@ fn generate_graphics(
         let images = images.into_inner();
         let mut render_settings = render_settings.into_inner();
         let map_image_handle = images.add(Image {
-            data: vec![],
+            data: vec![0; 16],
             texture_descriptor: TextureDescriptor {
                 label:           None,
                 size:            default(),
@@ -167,12 +165,7 @@ fn generate_graphics(
 
         // TODO: Switch to egui
         _ = commands.spawn(SpriteBundle {
-            texture: images
-                .get_handle(unsafe { render_settings.map_image_handle_id.unwrap_unchecked() }),
-            sprite: Sprite {
-                custom_size: Some(custom_sprite_size),
-                ..default()
-            },
+            texture: images.get_handle(render_settings.map_image_handle_id.unwrap()),
             ..default()
         });
     }
@@ -224,7 +217,17 @@ fn redraw_map(
     world_manager: Res<WorldManager>,
     render_settings: Res<'_, WorldRenderSettings>,
     mut images: ResMut<Assets<Image>>,
+    mut map_sprite: Query<'_, '_, &mut Sprite>,
 ) {
+    let Some(world) = world_manager.get_world() else {
+        #[cfg(feature = "logging")]
+        if should_redraw.0 {
+            debug!("Couldn't redraw map despite wanting to, because world isn't generated");
+        }
+        return;
+    };
+    assert!(world.width > 0);
+
     if should_redraw.0 {
         let world_manager: &WorldManager = &world_manager;
         let render_settings: &WorldRenderSettings = &render_settings;
@@ -239,60 +242,61 @@ fn redraw_map(
         let map_image = images
             .get_mut(&map_image_handle)
             .expect("Map image handle pointing to non-existing image");
+        #[cfg(feature = "logging")]
+        debug!("Resizing image to {}x{}", world.width, world.height);
         map_image.resize(bevy::render::render_resource::Extent3d {
-            width:                 world_manager.world().width,
-            height:                world_manager.world().height,
-            depth_or_array_layers: 1,
+            width: world.width,
+            height: world.height,
+            ..default()
         });
         map_image.data = world_manager.map_color_bytes(render_settings);
+        map_sprite.single_mut().custom_size = Some(Vec2 {
+            x: (world.width * WORLD_SCALE as u32) as f32,
+            y: (world.height * WORLD_SCALE as u32) as f32,
+        });
 
         should_redraw.0 = false;
     }
 }
 
 #[cfg(feature = "render")]
-const WORLD_SCALE: i32 = 2;
+const WORLD_SCALE: i32 = 4;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new();
-    let mut manager = WorldManager::new();
     #[cfg(feature = "render")]
     {
-        use bevy::winit::WinitSettings;
+        use bevy::winit::{UpdateMode, WinitSettings};
 
-        let world = manager.new_world(Some(0))?;
         _ = app
-            .insert_resource(WinitSettings::game())
+            .insert_resource(WinitSettings {
+                focused_mode: UpdateMode::Continuous,
+                unfocused_mode: UpdateMode::ReactiveLowPower {
+                    max_wait: std::time::Duration::from_secs(10),
+                },
+                ..default()
+            })
             .insert_resource(CursorMapPosition::default())
             .insert_resource(OpenedWindows::default())
             .insert_resource(WorldRenderSettings::default())
             .insert_resource(ShouldRedraw::default())
-            .insert_resource(GenerateWorldTask::default())
             .add_startup_system(generate_graphics)
             .add_system(update_gui)
             .add_system(update_cursor_map_position)
             .add_system(open_tile_info)
             .add_system(redraw_map);
 
-        app.add_plugins(WorldPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
-                width: (WORLD_SCALE * world.width as i32) as f32,
-                height: (WORLD_SCALE * world.height as i32) as f32,
-                title: String::from("World-RS"),
-                resizable: true,
-                ..default()
-            },
-            ..default()
-        }));
+        app.add_plugins(WorldPlugins);
     }
     #[cfg(not(feature = "render"))]
     {
-        _ = manager.new_world(Some(0))?;
-
         app.add_plugins(WorldPlugins);
     }
 
-    app.add_system(handle_generate_world_task)
-        .insert_resource(manager)
+    app.insert_resource(WorldManager::new())
+        .insert_resource(GenerateWorldTask(
+            /* Some(manager.new_world_async(Some(0))) */ None,
+        ))
+        .add_system(handle_generate_world_task)
         .run();
 
     Ok(())

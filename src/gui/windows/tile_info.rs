@@ -25,11 +25,14 @@ impl WindowSystem for TileInfo<'_, '_> {
                 let cursor_y = cursor_position.y;
                 let cursor_x = cursor_position.x;
 
-                let world_manager = world.resource::<WorldManager>();
+                let Some(world) = world.resource::<WorldManager>().get_world() else {
+                    ui.label("No world.");
+                    return;
+                };
                 if cursor_x >= 0
-                    && cursor_x < world_manager.world().width.try_into().unwrap()
+                    && cursor_x < world.width.try_into().unwrap()
                     && cursor_y >= 0
-                    && cursor_y < world_manager.world().height.try_into().unwrap()
+                    && cursor_y < world.height.try_into().unwrap()
                 {
                     let TerrainCell {
                         altitude,
@@ -38,7 +41,7 @@ impl WindowSystem for TileInfo<'_, '_> {
                         biome_presences,
                         x,
                         y,
-                    } = &world_manager.world().terrain[cursor_y as usize][cursor_x as usize];
+                    } = &world.terrain[cursor_y as usize][cursor_x as usize];
 
                     _ = ui.label("Coordinates");
                     _ = ui.label(format!("{x}:{y}"));

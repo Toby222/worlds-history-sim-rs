@@ -46,7 +46,16 @@ impl PluginGroup for WorldPlugins {
             group_builder = group_builder
                 .add(TransformPlugin)
                 .add(InputPlugin)
-                .add(WindowPlugin::default())
+                .add(WindowPlugin {
+                    window: WindowDescriptor {
+                        width: 1600.0,
+                        height: 800.0,
+                        title: String::from("World-RS"),
+                        resizable: true,
+                        ..default()
+                    },
+                    ..default()
+                })
                 .add(AssetPlugin::default())
                 .add(RenderPlugin)
                 .add(ImagePlugin::default_nearest())

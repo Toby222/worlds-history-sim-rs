@@ -173,7 +173,10 @@ pub(crate) trait WorldRenderer {
 impl WorldRenderer for WorldManager {
     #[must_use]
     fn map_color_bytes(&self, render_settings: &WorldRenderSettings) -> Vec<u8> {
-        self.world()
+        let Some(world) = self.get_world() else {
+            return vec![];
+        };
+        world
             .terrain
             .iter()
             .rev()
@@ -190,10 +193,11 @@ impl WorldRenderer for WorldManager {
 
     #[must_use]
     fn generate_color(&self, cell: &TerrainCell, render_settings: &WorldRenderSettings) -> Color {
+        let world = self.get_world().expect("No world in generate_color");
         let base_color = match render_settings.view {
-            WorldView::Biomes => biome_color(self.world(), cell),
-            WorldView::Topography => altitude_contour_color(self.world(), cell.altitude),
-            WorldView::Coastlines => coastline_color(self.world(), cell),
+            WorldView::Biomes => biome_color(world, cell),
+            WorldView::Topography => altitude_contour_color(world, cell.altitude),
+            WorldView::Coastlines => coastline_color(world, cell),
         };
         let mut normalizer = 1.0;
 

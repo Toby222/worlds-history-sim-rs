@@ -19,15 +19,8 @@ impl Display for CursorMapPosition {
 }
 
 #[cfg(feature = "render")]
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub(crate) struct ShouldRedraw(pub(crate) bool);
-#[cfg(feature = "render")]
-impl Default for ShouldRedraw {
-    fn default() -> Self {
-        Self(true)
-    }
-}
-
 #[cfg(feature = "render")]
 #[derive(Default, Resource)]
 pub(crate) struct OpenedWindows(HashSet<WindowId>);

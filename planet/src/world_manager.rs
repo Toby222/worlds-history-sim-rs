@@ -162,26 +162,8 @@ impl WorldManager {
         self.world.as_ref()
     }
 
-    #[must_use]
-    pub fn world(&self) -> &World {
-        assert!(self.world.is_some(), "No world.");
-        self.get_world().unwrap()
-    }
-
-    pub fn set_world(&mut self, world: World) {
+        pub fn set_world(&mut self, world: World) {
         self.world = Some(world);
-    }
-
-    pub fn new_world(&mut self, seed: Option<u32>) -> Result<&World, WorldGenError> {
-        let seed = seed.unwrap_or_else(random);
-        let mut new_world = World::new(
-            WorldManager::NEW_WORLD_WIDTH,
-            WorldManager::NEW_WORLD_HEIGHT,
-            seed,
-        );
-        new_world.generate()?;
-        self.world = Some(new_world);
-        Ok(self.get_world().unwrap())
     }
 
     pub fn new_world_async(&mut self, seed: Option<u32>) -> Task<Result<World, WorldGenError>> {
