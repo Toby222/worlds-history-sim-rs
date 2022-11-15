@@ -90,7 +90,7 @@ fn rainfall_color(rainfall: f32) -> Color {
     if rainfall <= 0.0 {
         Color::BLACK
     } else {
-        Color::rgb(rainfall / World::MAX_RAINFALL, 0.0, 0.0)
+        Color::rgb(0.0, rainfall / World::MAX_RAINFALL, 0.0)
     }
 }
 
