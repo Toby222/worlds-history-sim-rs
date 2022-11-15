@@ -101,8 +101,6 @@ fn handle_generate_world_task(
                 *progress = (0.0, String::from("Generating world..."));
             }
         } else {
-            debug!("Still generating world");
-
             #[cfg(feature = "render")]
             {
                 if let Ok(new_progress) = progress_channel.receiver().try_recv() {
