@@ -186,12 +186,14 @@ impl World {
     }
 
     fn generate_continents(&mut self) {
+        #[cfg(feature = "logging")]
         info!("Generating continents");
         let width = self.width as f32;
         let height = self.height as f32;
 
         for i in 0..World::NUM_CONTINENTS {
-            info!("{}/{}", i, World::NUM_CONTINENTS);
+            #[cfg(feature = "logging")]
+            info!("Continents {}/{}", i, World::NUM_CONTINENTS);
 
             self.continent_offsets[i as usize].x = self
                 .rng
@@ -269,6 +271,9 @@ impl World {
         let offset_5 = World::random_offset_vector(&mut self.rng);
 
         for y in 0..self.terrain.len() {
+            #[cfg(feature = "logging")]
+            info!("Altitude: {}/{}", y, self.terrain.len());
+
             let alpha = (y as f32 / self.height as f32) * PI;
 
             for x in 0..self.terrain[y].len() {
@@ -381,12 +386,14 @@ impl World {
     }
 
     fn generate_rainfall(&mut self) -> Result<(), CartesianError> {
+        #[cfg(feature = "logging")]
         info!("Generating rainfall");
         const RADIUS: f32 = 2.0;
         let offset = World::random_offset_vector(&mut self.rng);
 
         let height = self.terrain.len();
         for y in 0..height {
+            #[cfg(feature = "logging")]
             info!("Rainfall: {}/{}", y, height);
             let alpha = (y as f32 / self.height as f32) * PI;
 
@@ -453,10 +460,14 @@ impl World {
     }
 
     fn generate_temperature(&mut self) -> Result<(), CartesianError> {
+        #[cfg(feature = "logging")]
+        info!("Generating temperature");
         let offset = World::random_offset_vector(&mut self.rng);
         const RADIUS: f32 = 2.0;
 
         for y in 0..self.terrain.len() {
+            #[cfg(feature = "logging")]
+            info!("Temperature: {}/{}", y, self.terrain.len());
             let alpha = (y as f32 / self.height as f32) * PI;
             for x in 0..self.terrain[y].len() {
                 let beta = (x as f32 / self.width as f32) * TAU;
@@ -497,7 +508,10 @@ impl World {
     }
 
     fn generate_biomes(&mut self) {
+        info!("Generating biomes");
         for y in 0..self.terrain.len() {
+            #[cfg(feature = "logging")]
+            info!("Biomes: {}/{}", y, self.terrain.len());
             for x in 0..self.terrain[y].len() {
                 let cell = &self.terrain[y][x];
 
