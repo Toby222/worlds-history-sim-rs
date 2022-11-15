@@ -38,7 +38,7 @@ impl Error for LoadError {
     }
 }
 impl Display for LoadError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             LoadError::MissingSave(_) => f.write_str("No save found at given path"),
             LoadError::InvalidSave(_) => f.write_str("Loaded file is not a valid save"),
@@ -70,7 +70,7 @@ impl Error for SaveError {
     }
 }
 impl Display for SaveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             SaveError::MissingWorld => f.write_str("No world to save found."),
             SaveError::SerializationError(_) => f.write_str("Failed to serialize world."),

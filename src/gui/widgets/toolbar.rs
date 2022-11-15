@@ -31,7 +31,7 @@ iterable_enum!(ToolbarButton {
 
 impl ToolbarButton {
     fn clicked(self, world: &mut World) {
-        world.resource_scope(|world, mut world_manager: Mut<'_, WorldManager>| {
+        world.resource_scope(|world, mut world_manager: Mut<WorldManager>| {
             match self {
                 ToolbarButton::GenerateWorld => {
                     let generate_world_task = &mut world.resource_mut::<GenerateWorldTask>();

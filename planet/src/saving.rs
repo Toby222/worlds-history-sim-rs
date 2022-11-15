@@ -50,7 +50,7 @@ impl<'de> Deserialize<'de> for World {
         impl<'de> Visitor<'de> for WorldVisitor {
             type Value = World;
 
-            fn expecting(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
                 formatter.write_str("struct World")
             }
 

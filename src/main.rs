@@ -37,10 +37,10 @@ use {
 
 #[cfg(feature = "render")]
 fn update_cursor_map_position(
-    mut cursor_map_position: ResMut<'_, CursorMapPosition>,
-    transform: Query<'_, '_, (&Camera, &GlobalTransform), With<Camera2d>>,
-    windows: Res<'_, Windows>,
-    world_manager: Res<'_, WorldManager>,
+    mut cursor_map_position: ResMut<CursorMapPosition>,
+    transform: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+    windows: Res<Windows>,
+    world_manager: Res<WorldManager>,
 ) {
     let Some(world) = world_manager.get_world() else {
         return
@@ -70,9 +70,9 @@ fn update_cursor_map_position(
 }
 
 fn handle_generate_world_task(
-    mut generate_world_task: ResMut<'_, GenerateWorldTask>,
-    mut world_manager: ResMut<'_, WorldManager>,
-    #[cfg(feature = "render")] mut should_redraw: ResMut<'_, ShouldRedraw>,
+    mut generate_world_task: ResMut<GenerateWorldTask>,
+    mut world_manager: ResMut<WorldManager>,
+    #[cfg(feature = "render")] mut should_redraw: ResMut<ShouldRedraw>,
 ) {
     if let Some(task) = &mut generate_world_task.0 {
         if task.is_finished() {
@@ -100,10 +100,10 @@ fn handle_generate_world_task(
 
 #[cfg(feature = "render")]
 fn generate_graphics(
-    mut commands: Commands<'_, '_>,
-    images: ResMut<'_, Assets<Image>>,
-    egui_context: ResMut<'_, EguiContext>,
-    render_settings: ResMut<'_, WorldRenderSettings>,
+    mut commands: Commands,
+    images: ResMut<Assets<Image>>,
+    egui_context: ResMut<EguiContext>,
+    render_settings: ResMut<WorldRenderSettings>,
 ) {
     // Add Julia-Mono font to egui
     {
@@ -180,7 +180,7 @@ fn open_tile_info(mut windows: ResMut<OpenedWindows>, keys: Res<Input<KeyCode>>)
 
 #[cfg(feature = "render")]
 fn update_gui(world: &mut World) {
-    world.resource_scope(|world, mut ctx: Mut<'_, EguiContext>| {
+    world.resource_scope(|world, mut ctx: Mut<EguiContext>| {
         let ctx = ctx.ctx_mut();
         #[cfg(feature = "logging")]
         {
@@ -215,9 +215,9 @@ fn update_gui(world: &mut World) {
 fn redraw_map(
     mut should_redraw: ResMut<ShouldRedraw>,
     world_manager: Res<WorldManager>,
-    render_settings: Res<'_, WorldRenderSettings>,
+    render_settings: Res<WorldRenderSettings>,
     mut images: ResMut<Assets<Image>>,
-    mut map_sprite: Query<'_, '_, &mut Sprite>,
+    mut map_sprite: Query<&mut Sprite>,
 ) {
     let Some(world) = world_manager.get_world() else {
         #[cfg(feature = "logging")]

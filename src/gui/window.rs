@@ -49,7 +49,7 @@ fn window<S: 'static + WindowSystem>(world: &mut World, ctx: &Context) {
             instances: HashMap::new(),
         });
     }
-    world.resource_scope(|world, mut states: Mut<'_, StateInstances<S>>| {
+    world.resource_scope(|world, mut states: Mut<StateInstances<S>>| {
         let id: WindowId = S::name().into();
         if !states.instances.contains_key(&id) {
             debug!(

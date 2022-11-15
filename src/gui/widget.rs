@@ -28,7 +28,7 @@ pub(crate) fn widget<S: 'static + WidgetSystem>(world: &mut World, ui: &mut Ui, 
             instances: HashMap::new(),
         });
     }
-    world.resource_scope(|world, mut states: Mut<'_, StateInstances<S>>| {
+    world.resource_scope(|world, mut states: Mut<StateInstances<S>>| {
         if !states.instances.contains_key(&id) {
             debug!(
                 "Registering system state for widget {id:?} of type {}",

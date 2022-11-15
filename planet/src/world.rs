@@ -46,7 +46,7 @@ impl Error for WorldGenError {
     }
 }
 impl Display for WorldGenError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             WorldGenError::CartesianError(err) => Display::fmt(err, f),
         }

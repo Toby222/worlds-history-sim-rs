@@ -26,7 +26,7 @@ impl Error for CartesianError {
     }
 }
 impl Display for CartesianError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             CartesianError::InvalidAlpha(alpha) => {
                 f.write_fmt(format_args!("Alpha value must be [0..PI], was {}", alpha))
