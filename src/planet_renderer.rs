@@ -1,10 +1,6 @@
 use {
     crate::macros::iterable_enum_stringify,
-    bevy::{
-        asset::HandleId,
-        prelude::{Color, Resource},
-        utils::HashSet,
-    },
+    bevy::{asset::HandleId, prelude::*, utils::HashSet},
     planet::{BiomeStats, TerrainCell, World, WorldManager},
 };
 
@@ -166,34 +162,89 @@ fn coastline_color(world: &World, cell: &TerrainCell) -> Color {
         COASTLINE_PALETTE[0]
     }
 }
-pub trait WorldRenderer {
-    fn map_color_bytes(&self, render_settings: &WorldRenderSettings) -> Vec<u8>;
-    fn generate_color(&self, cell: &TerrainCell, render_settings: &WorldRenderSettings) -> Color;
+
+const CACHE_SIZE: usize =
+    WorldOverlay::ITEM_COUNT * WorldOverlay::ITEM_COUNT * WorldView::ITEM_COUNT;
+
+#[derive(Default, Resource)]
+pub struct WorldRenderer {
+    cached_world_seed: u32,
+    cache:             [Option<Vec<u8>>; CACHE_SIZE],
 }
-impl WorldRenderer for WorldManager {
+
+impl WorldRenderer {
+    fn cache_index(render_settings: &WorldRenderSettings) -> usize {
+        let view_num = match render_settings.view {
+            WorldView::Biomes => 0,
+            WorldView::Topography => 1,
+            WorldView::Coastlines => 2,
+        };
+        let mut overlay_num = 0;
+        for overlay in render_settings.visible_overlays.iter() {
+            overlay_num |= match overlay {
+                WorldOverlay::Temperature => 1,
+                WorldOverlay::Rainfall => 2,
+            };
+        }
+        #[cfg(feature = "logging")]
+        debug!(overlay_num, view_num);
+        (view_num << WorldOverlay::ITEM_COUNT) | overlay_num
+    }
+
     #[must_use]
-    fn map_color_bytes(&self, render_settings: &WorldRenderSettings) -> Vec<u8> {
-        let Some(world) = self.get_world() else {
+    pub fn map_color_bytes(
+        &mut self,
+        world_manager: &WorldManager,
+        render_settings: &WorldRenderSettings,
+    ) -> Vec<u8> {
+        let Some(world) = world_manager.get_world() else {
             return vec![];
         };
-        world
+
+        let cache_index = WorldRenderer::cache_index(render_settings);
+        #[cfg(feature = "logging")]
+        debug!(cache_index);
+        assert!(
+            cache_index < CACHE_SIZE,
+            "Generated cache index too large for render cache"
+        );
+        if world.seed != self.cached_world_seed {
+            self.cache = default();
+            self.cached_world_seed = world.seed;
+        }
+        if let Some(cached) = &self.cache[cache_index] {
+            return cached.clone();
+        }
+
+        let bytes: Vec<_> = world
             .terrain
             .iter()
             .rev()
             .flatten()
             .flat_map(|cell| {
-                self.generate_color(cell, render_settings)
+                self.generate_color(world_manager, cell, render_settings)
                     .as_rgba_f32()
                     .iter()
                     .flat_map(|num| num.to_le_bytes())
                     .collect::<Vec<u8>>()
             })
-            .collect()
+            .collect();
+        let result = bytes.clone();
+        self.cache[cache_index] = Some(bytes);
+
+        result
     }
 
     #[must_use]
-    fn generate_color(&self, cell: &TerrainCell, render_settings: &WorldRenderSettings) -> Color {
-        let world = self.get_world().expect("No world in generate_color");
+    pub fn generate_color(
+        &self,
+        world_manager: &WorldManager,
+        cell: &TerrainCell,
+        render_settings: &WorldRenderSettings,
+    ) -> Color {
+        let world = world_manager
+            .get_world()
+            .expect("No world in generate_color");
         let base_color = match render_settings.view {
             WorldView::Biomes => biome_color(world, cell),
             WorldView::Topography => altitude_contour_color(world, cell.altitude),

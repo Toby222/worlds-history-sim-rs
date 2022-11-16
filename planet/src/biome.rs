@@ -32,7 +32,7 @@ impl From<BiomeType> for BiomeStats {
             BiomeType::IceCap => BiomeStats {
                 name: "Ice Cap".into(),
                 #[cfg(feature = "render")]
-                color: Color::rgb_u8(253, 244, 235),
+                color: Color::WHITE,
                 min_altitude: World::MIN_ALTITUDE,
                 max_altitude: World::MAX_ALTITUDE,
                 min_rainfall: World::MIN_RAINFALL,

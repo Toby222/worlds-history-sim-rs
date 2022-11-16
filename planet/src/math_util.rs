@@ -35,6 +35,7 @@ impl Display for CartesianError {
     }
 }
 
+#[must_use]
 pub fn cartesian_coordinates(
     alpha: f32,
     mut beta: f32,
@@ -61,6 +62,7 @@ pub fn cartesian_coordinates(
     ))
 }
 
+#[must_use]
 pub fn random_point_in_sphere(rng: &mut StdRng, radius: f32) -> Vec3A {
     // https://karthikkaranth.me/blog/generating-random-points-in-a-sphere/#better-choice-of-spherical-coordinates
 
@@ -85,14 +87,19 @@ pub fn random_point_in_sphere(rng: &mut StdRng, radius: f32) -> Vec3A {
     )
 }
 
+#[inline(always)]
+#[must_use]
 pub fn mix_values(a: f32, b: f32, weight_b: f32) -> f32 {
     (b * weight_b) + (a * (1.0 - weight_b))
 }
 
 pub trait RepeatNum {
+    #[must_use]
     fn repeat(self, length: Self) -> Self;
 }
 impl RepeatNum for f32 {
+    #[inline(always)]
+    #[must_use]
     fn repeat(self, length: f32) -> f32 {
         f32::clamp(self - (self / length).floor() * length, 0.0, length)
     }

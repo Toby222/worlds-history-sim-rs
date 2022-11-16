@@ -233,6 +233,7 @@ fn update_gui(world: &mut World) {
 fn redraw_map(
     mut should_redraw: ResMut<ShouldRedraw>,
     world_manager: Res<WorldManager>,
+    mut world_renderer: ResMut<WorldRenderer>,
     render_settings: Res<WorldRenderSettings>,
     mut images: ResMut<Assets<Image>>,
     mut map_sprite: Query<&mut Sprite>,
@@ -267,7 +268,7 @@ fn redraw_map(
             height: world.height,
             ..default()
         });
-        map_image.data = world_manager.map_color_bytes(render_settings);
+        map_image.data = world_renderer.map_color_bytes(world_manager, render_settings);
         map_sprite.single_mut().custom_size = Some(Vec2 {
             x: (world.width * WORLD_SCALE as u32) as f32,
             y: (world.height * WORLD_SCALE as u32) as f32,
@@ -297,6 +298,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .insert_resource(OpenedWindows::default())
             .insert_resource(WorldRenderSettings::default())
             .insert_resource(ShouldRedraw::default())
+            .insert_resource(WorldRenderer::default())
             .add_startup_system(generate_graphics)
             .add_system(update_gui)
             .add_system(update_cursor_map_position)
