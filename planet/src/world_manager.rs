@@ -155,14 +155,12 @@ impl WorldManager {
                 WorldManager::NEW_WORLD_HEIGHT,
                 seed,
             );
-            if let Err(_) =
-                progress_sender.try_send((0.0, String::from("Generating new world...")))
+            if let Err(_) = progress_sender.try_send((0.0, String::from("Generating new world...")))
             {
                 // Quietly ignore. It's not critical and logging is slow.
             }
             let result = new_world.generate(&progress_sender);
-            if let Err(_) =
-                progress_sender.try_send((1.0, String::from("Done generating world!")))
+            if let Err(_) = progress_sender.try_send((1.0, String::from("Done generating world!")))
             {
                 // Quietly ignore. See above
             }
