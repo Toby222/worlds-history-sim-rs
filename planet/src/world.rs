@@ -89,6 +89,7 @@ pub struct World {
     pub min_temperature:   f32,
     #[serde(skip)]
     pub rng:               StdRng,
+    pub iteration:         usize,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -98,24 +99,40 @@ pub struct TerrainCell {
     pub temperature: f32,
 
     #[serde(skip)]
-    pub x: usize,
+    pub x:               usize,
     #[serde(skip)]
-    pub y: usize,
+    pub y:               usize,
+    pub local_iteration: usize,
 
     pub biome_presences: Vec<(BiomeType, f32)>,
 }
 
+impl TerrainCell {
+    pub fn get_next_local_random_int(&mut self, world: &World) -> f32 {
+        let seed = world.seed;
+
+        let x = seed as f32 + self.x as f32;
+        let y = seed as f32 + self.y as f32;
+        let z = seed as f32 + world.iteration as f32 + (self.local_iteration - 1) as f32;
+
+        drop(world);
+        self.local_iteration += 1;
+
+        perlin::perlin_value(x, y, z)
+    }
+}
+
 impl World {
     pub const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
-    pub const CONTINENT_MAX_SIZE_FACTOR: f32 = 8.0;
-    pub const CONTINENT_MIN_SIZE_FACTOR: f32 = 6.0;
+    pub const CONTINENT_MAX_SIZE_FACTOR: f32 = 8.7;
+    pub const CONTINENT_MIN_SIZE_FACTOR: f32 = 5.7;
     pub const MAX_ALTITUDE: f32 = 15000.0;
     pub const MAX_RAINFALL: f32 = 13000.0;
     pub const MAX_TEMPERATURE: f32 = 30.0;
     pub const MIN_ALTITUDE: f32 = -15000.0;
     pub const MIN_RAINFALL: f32 = 0.0;
     pub const MIN_TEMPERATURE: f32 = -35.0;
-    pub const NUM_CONTINENTS: u8 = 6;
+    pub const NUM_CONTINENTS: u8 = 12;
     pub const RAINFALL_DRYNESS_FACTOR: f32 = 0.005;
     pub const RAINFALL_DRYNESS_OFFSET: f32 = World::RAINFALL_DRYNESS_FACTOR * World::MAX_RAINFALL;
     pub const RAINFALL_SPAN: f32 = World::MAX_RAINFALL - World::MIN_RAINFALL;
@@ -127,10 +144,7 @@ impl World {
             width,
             height,
             seed,
-            terrain: vec![
-                vec![TerrainCell::default(); width.try_into().unwrap()];
-                height.try_into().unwrap()
-            ],
+            terrain: vec![vec![default(); width.try_into().unwrap()]; height.try_into().unwrap()],
             continent_offsets: [default(); World::NUM_CONTINENTS as usize],
             continent_sizes: [default(); World::NUM_CONTINENTS as usize],
             max_altitude: World::MIN_ALTITUDE,
@@ -140,6 +154,7 @@ impl World {
             max_temperature: World::MIN_TEMPERATURE,
             min_temperature: World::MAX_TEMPERATURE,
             rng: StdRng::seed_from_u64(seed as u64),
+            iteration: 0,
         }
     }
 
@@ -148,10 +163,7 @@ impl World {
             width,
             height,
             seed,
-            terrain: vec![
-                vec![TerrainCell::default(); width.try_into().unwrap()];
-                height.try_into().unwrap()
-            ],
+            terrain: vec![vec![default(); width.try_into().unwrap()]; height.try_into().unwrap()],
             continent_offsets: [default(); World::NUM_CONTINENTS as usize],
             continent_sizes: [default(); World::NUM_CONTINENTS as usize],
             max_altitude: World::MIN_ALTITUDE,
@@ -161,6 +173,7 @@ impl World {
             max_temperature: World::MIN_TEMPERATURE,
             min_temperature: World::MAX_TEMPERATURE,
             rng: StdRng::seed_from_u64(seed as u64),
+            iteration: 0,
         }
     }
 
@@ -187,35 +200,76 @@ impl World {
         Ok(())
     }
 
-    fn generate_continents(&mut self) {
-        #[cfg(feature = "logging")]
+    fn generate_continents(&mut self, progress_sender: &Sender<(f32, String)>) {
         info!("Generating continents");
+
+        send_progress(progress_sender, 0.0, format!("Generating continents"));
         let width = self.width as f32;
         let height = self.height as f32;
 
+        const LONGTITUDE_FACTOR: f32 = 15.0;
         const LATITUDE_FACTOR: f32 = 6.0;
 
-        for i in 0..World::NUM_CONTINENTS {
-            // #[cfg(feature = "logging")]
-            // info!("Continents: {}/{}", i, World::NUM_CONTINENTS);
-
-            self.continent_offsets[i as usize].x = self
+        let mut previous_position = Vec2 {
+            x: self
                 .rng
-                .gen_range(width * i as f32 * 2.0 / 5.0..(width * (i as f32 + 2.0) * 2.0 / 5.0))
-                .repeat(width);
-            self.continent_offsets[i as usize].y = self.rng.gen_range(
-                height * 1.0 / LATITUDE_FACTOR..height * (LATITUDE_FACTOR - 1.0) / LATITUDE_FACTOR,
+                .gen_range(0.0..width * (LONGTITUDE_FACTOR - 1.0) / LONGTITUDE_FACTOR),
+            y: self.rng.gen_range(
+                height / LATITUDE_FACTOR..height * (LATITUDE_FACTOR - 1.0) / LATITUDE_FACTOR,
+            ),
+        };
+        for i in 0..World::NUM_CONTINENTS {
+            send_progress(
+                progress_sender,
+                i as f32 / World::NUM_CONTINENTS as f32,
+                format!("Generating continents: {i}/{{World::NUM_CONTINENTS}}"),
+            );
+            let idx = i as usize;
+
+            let width_offset = self.rng.gen_range(0.0..6.0);
+
+            self.continent_offsets[idx] = previous_position;
+
+            self.continent_sizes[idx] = Vec2 {
+                x: self.rng.gen_range(
+                    World::CONTINENT_MIN_SIZE_FACTOR + width_offset
+                        ..World::CONTINENT_MAX_SIZE_FACTOR + width_offset,
+                ),
+                y: self.rng.gen_range(
+                    World::CONTINENT_MIN_SIZE_FACTOR + width_offset
+                        ..World::CONTINENT_MAX_SIZE_FACTOR + width_offset,
+                ),
+            };
+
+            let y_position = self.rng.gen_range(
+                height / LATITUDE_FACTOR..height * (LATITUDE_FACTOR - 1.0) / LATITUDE_FACTOR,
             );
 
-            self.continent_sizes[i as usize] = Vec2 {
-                x: self
-                    .rng
-                    .gen_range(World::CONTINENT_MIN_SIZE_FACTOR..World::CONTINENT_MAX_SIZE_FACTOR),
-                y: self
-                    .rng
-                    .gen_range(World::CONTINENT_MIN_SIZE_FACTOR..World::CONTINENT_MAX_SIZE_FACTOR)
-                    / 2.0,
+            let new_vector = if i % 3 == 2 {
+                Vec2 {
+                    x: f32::repeat(
+                        previous_position.x
+                            + self.rng.gen_range(
+                                width * 4.0 / LONGTITUDE_FACTOR..width * 6.0 / LONGTITUDE_FACTOR,
+                            ),
+                        width,
+                    ),
+                    y: y_position,
+                }
+            } else {
+                Vec2 {
+                    x: f32::repeat(
+                        previous_position.x
+                            + self.rng.gen_range(
+                                width / LONGTITUDE_FACTOR..width * 2.0 / LONGTITUDE_FACTOR,
+                            ),
+                        width,
+                    ),
+                    y: y_position,
+                }
             };
+
+            previous_position = new_vector;
         }
         info!("Done generating continents");
     }
@@ -278,16 +332,16 @@ impl World {
         progress_sender: &Sender<(f32, String)>,
     ) -> Result<(), CartesianError> {
         info!("Generating altitude");
-        self.generate_continents();
+        self.generate_continents(progress_sender);
 
-        const RADIUS_1: f32 = 0.5;
+        const RADIUS_1: f32 = 0.75;
         const RADIUS_2: f32 = 8.0;
         const RADIUS_3: f32 = 4.0;
         const RADIUS_4: f32 = 8.0;
         const RADIUS_5: f32 = 16.0;
         const RADIUS_6: f32 = 64.0;
         const RADIUS_7: f32 = 128.0;
-        const RADIUS_8: f32 = 1.0;
+        const RADIUS_8: f32 = 1.5;
         const RADIUS_9: f32 = 1.0;
 
         let offset_1 = World::random_offset_vector(&mut self.rng);
@@ -433,8 +487,10 @@ impl World {
         info!("Generating rainfall");
         const RADIUS_1: f32 = 2.0;
         const RADIUS_2: f32 = 1.0;
+        const RADIUS_3: f32 = 16.0;
         let offset_1 = World::random_offset_vector(&mut self.rng);
         let offset_2 = World::random_offset_vector(&mut self.rng);
+        let offset_3 = World::random_offset_vector(&mut self.rng);
 
         let height = self.terrain.len();
         for y in 0..height {
@@ -457,8 +513,12 @@ impl World {
                     .random_noise_from_polar_coordinates(alpha, beta, RADIUS_2, offset_2)?
                     * 1.5
                     + 0.25;
+                let random_noise_3 =
+                    self.random_noise_from_polar_coordinates(alpha, beta, RADIUS_3, offset_3)?;
 
-                let latitude_factor = alpha + (random_noise_1 * 2.0 - 1.0) * PI * 0.2;
+                let value_a = mix_values(random_noise_1, random_noise_3, 0.15);
+
+                let latitude_factor = alpha + (value_a * 2.0 - 1.0) * PI * 0.2;
                 let latitude_modifier_1 = (1.5 * f32::sin(latitude_factor)) - 0.5;
                 let latitude_modifier_2 = f32::cos(latitude_factor);
 
@@ -545,8 +605,10 @@ impl World {
         progress_sender: &Sender<(f32, String)>,
     ) -> Result<(), CartesianError> {
         info!("Generating temperature");
-        let offset = World::random_offset_vector(&mut self.rng);
-        const RADIUS: f32 = 2.0;
+        let offset_1 = World::random_offset_vector(&mut self.rng);
+        let offset_2 = World::random_offset_vector(&mut self.rng);
+        const RADIUS_1: f32 = 2.0;
+        const RADIUS_2: f32 = 16.0;
 
         let height = self.terrain.len();
         for y in 0..height {
@@ -564,12 +626,14 @@ impl World {
 
                 let beta = (x as f32 / self.width as f32) * TAU;
 
-                let random_noise =
-                    self.random_noise_from_polar_coordinates(alpha, beta, RADIUS, offset)?;
+                let random_noise_1 =
+                    self.random_noise_from_polar_coordinates(alpha, beta, RADIUS_1, offset_1)?;
+                let random_noise_2 =
+                    self.random_noise_from_polar_coordinates(alpha, beta, RADIUS_2, offset_2)?;
 
                 let cell = &mut self.terrain[y][x];
 
-                let latitude_modifer = mix_values(alpha, random_noise * PI, 0.1);
+                let latitude_modifer = alpha * 0.9 + (random_noise_1 + random_noise_2) * 0.05 * PI;
                 let altitude_factor = f32::max(
                     0.0,
                     (cell.altitude / World::MAX_ALTITUDE) * World::TEMPERATURE_ALTITUDE_FACTOR,

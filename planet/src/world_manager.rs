@@ -42,7 +42,10 @@ impl Display for LoadError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             LoadError::MissingSave(_) => f.write_str("No save found at given path"),
-            LoadError::InvalidSave(_) => f.write_str("Loaded file is not a valid save"),
+            LoadError::InvalidSave(err) => f.write_fmt(format_args!(
+                "Loaded file is not a valid save - {}",
+                err.to_string()
+            )),
         }
     }
 }

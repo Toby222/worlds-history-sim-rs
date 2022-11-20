@@ -41,6 +41,7 @@ impl WindowSystem for TileInfo<'_, '_> {
                         biome_presences,
                         x,
                         y,
+                        ..
                     } = &world.terrain[cursor_y as usize][cursor_x as usize];
 
                     _ = ui.label("Coordinates");

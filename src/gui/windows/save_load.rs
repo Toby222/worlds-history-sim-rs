@@ -31,12 +31,12 @@ impl WindowSystem for SaveLoad<'_, '_> {
                         if let Some(path) = tinyfiledialogs::save_file_dialog_with_filter(
                             "Save world",
                             state.file_name.as_str(),
-                            &["*.rsplnt", "*.ron"],
+                            &["*.rsplnt", "*.rsplnt"],
                             "World file",
                         ) {
                             if let Err(err) = world_manager.save_world(&path) {
                                 // TODO: Error popup
-                                error!("Failed to save: {err:#?}");
+                                error!("Failed to save: {err}");
                             }
                             *state.file_name = path;
                         }
@@ -45,14 +45,15 @@ impl WindowSystem for SaveLoad<'_, '_> {
                         if let Some(path) = tinyfiledialogs::open_file_dialog(
                             "World file",
                             state.file_name.as_str(),
-                            Some((&["*.ron", "*.rsplnt"], "*.ron,*.rsplnt")),
+                            Some((&["*.rsplnt"], "*.rspnt")),
                         ) {
                             if let Err(err) = world_manager.load_world(&path) {
                                 // TODO: Error popup
-                                error!("Failed to load: {err:#?}");
+                                error!("Failed to load: {err}");
+                            } else {
+                                should_redraw.0 = true;
                             }
                             *state.file_name = path;
-                            should_redraw.0 = true;
                         }
                     }
                 });

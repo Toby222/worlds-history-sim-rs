@@ -1,5 +1,6 @@
 use {
     crate::{TerrainCell, World},
+    bevy::prelude::debug,
     rand::{rngs::StdRng, SeedableRng},
     serde::{
         de::{Error, MapAccess, SeqAccess, Visitor},
@@ -43,6 +44,7 @@ impl<'de> Deserialize<'de> for World {
             Terrain,
             ContinentOffsets,
             ContinentSizes,
+            Iteration,
         }
 
         struct WorldVisitor;
@@ -64,23 +66,29 @@ impl<'de> Deserialize<'de> for World {
 
                 let height = seq
                     .next_element()?
-                    .ok_or_else(|| Error::invalid_length(0, &self))?;
+                    .ok_or_else(|| Error::invalid_length(1, &self))?;
 
                 let seed = seq
                     .next_element()?
-                    .ok_or_else(|| Error::invalid_length(0, &self))?;
+                    .ok_or_else(|| Error::invalid_length(2, &self))?;
 
                 let terrain: Vec<Vec<TerrainCell>> = seq
                     .next_element()?
-                    .ok_or_else(|| Error::invalid_length(0, &self))?;
+                    .ok_or_else(|| Error::invalid_length(3, &self))?;
 
                 let continent_offsets = seq
                     .next_element()?
-                    .ok_or_else(|| Error::invalid_length(0, &self))?;
+                    .ok_or_else(|| Error::invalid_length(4, &self))?;
 
-                let continent_widths = seq
+                let continent_sizes = seq
                     .next_element()?
-                    .ok_or_else(|| Error::invalid_length(0, &self))?;
+                    .ok_or_else(|| Error::invalid_length(5, &self))?;
+
+                debug!("Iteration aaaaa");
+                let iteration = seq
+                    .next_element()?
+                    .ok_or_else(|| Error::invalid_length(6, &self))?;
+                debug!("Iteration bbbbb");
 
                 let world_attributes = &mut WorldTerrainAttributes::default();
                 let world_attributes =
@@ -111,13 +119,14 @@ impl<'de> Deserialize<'de> for World {
                             attributes
                         });
 
-                Ok(World {
+                debug!("Constructing world");
+                let mut world = World {
                     width,
                     height,
                     seed,
                     terrain,
                     continent_offsets,
-                    continent_sizes: continent_widths,
+                    continent_sizes,
 
                     max_altitude: world_attributes.max_altitude,
                     min_altitude: world_attributes.min_altitude,
@@ -127,7 +136,22 @@ impl<'de> Deserialize<'de> for World {
                     min_temperature: world_attributes.min_temperature,
 
                     rng: StdRng::seed_from_u64(seed as u64),
-                })
+                    iteration,
+                };
+                {
+                    let mut y = 0;
+                    debug!("Completing terrain");
+                    for terrain_row in world.terrain.iter_mut() {
+                        let mut x = 0;
+                        for terrain_cell in terrain_row.iter_mut() {
+                            terrain_cell.x = x;
+                            terrain_cell.y = y;
+                            x += 1;
+                        }
+                        y += 1;
+                    }
+                }
+                Ok(world)
             }
 
             fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
@@ -140,6 +164,7 @@ impl<'de> Deserialize<'de> for World {
                 let mut terrain = None;
                 let mut continent_offsets = None;
                 let mut continent_widths = None;
+                let mut iteration = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -178,6 +203,12 @@ impl<'de> Deserialize<'de> for World {
                                 return Err(Error::duplicate_field("continent_widths"));
                             }
                             continent_widths = Some(map.next_value()?);
+                        },
+                        Field::Iteration => {
+                            if iteration.is_some() {
+                                return Err(Error::duplicate_field("iteration"));
+                            }
+                            iteration = Some(map.next_value()?);
                         },
                     }
                 }
@@ -229,7 +260,9 @@ impl<'de> Deserialize<'de> for World {
                             attributes
                         });
 
-                Ok(World {
+                let iteration = iteration.ok_or_else(|| Error::missing_field("iteration"))?;
+
+                let mut world = World {
                     width,
                     height,
                     seed,
@@ -245,7 +278,21 @@ impl<'de> Deserialize<'de> for World {
                     min_temperature: world_attributes.min_temperature,
 
                     rng: StdRng::seed_from_u64(seed as u64),
-                })
+                    iteration,
+                };
+                {
+                    let mut y = 0;
+                    for terrain_row in world.terrain.iter_mut() {
+                        let mut x = 0;
+                        for terrain_cell in terrain_row.iter_mut() {
+                            terrain_cell.x = x;
+                            terrain_cell.y = y;
+                            x += 1;
+                        }
+                        y += 1;
+                    }
+                }
+                Ok(world)
             }
         }
 

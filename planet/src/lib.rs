@@ -1,3 +1,4 @@
+pub mod human_group;
 pub mod world;
 pub use world::{TerrainCell, World, WorldGenError};
 pub mod biome;
