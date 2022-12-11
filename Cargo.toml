@@ -35,7 +35,7 @@ path = "planet"
 default-features = false
 
 [dependencies.bevy]
-version = "0.9.0"
+version = "0.9"
 default-features = false
 
 [dependencies.fxhash]

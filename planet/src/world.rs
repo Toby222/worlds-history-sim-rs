@@ -10,6 +10,7 @@ use {
         perlin,
         BiomeStats,
         BiomeType,
+        TerrainCell,
     },
     bevy::{
         log::info,
@@ -92,38 +93,10 @@ pub struct World {
     pub iteration:         usize,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct TerrainCell {
-    pub altitude:    f32,
-    pub rainfall:    f32,
-    pub temperature: f32,
-
-    #[serde(skip)]
-    pub x:               usize,
-    #[serde(skip)]
-    pub y:               usize,
-    pub local_iteration: usize,
-
-    pub biome_presences: Vec<(BiomeType, f32)>,
-}
-
-impl TerrainCell {
-    pub fn get_next_local_random_int(&mut self, world: &World) -> f32 {
-        let seed = world.seed;
-
-        let x = seed as f32 + self.x as f32;
-        let y = seed as f32 + self.y as f32;
-        let z = seed as f32 + world.iteration as f32 + (self.local_iteration - 1) as f32;
-
-        drop(world);
-        self.local_iteration += 1;
-
-        perlin::perlin_value(x, y, z)
-    }
-}
-
 impl World {
     pub const ALTITUDE_SPAN: f32 = World::MAX_ALTITUDE - World::MIN_ALTITUDE;
+    /// Circumference - in kilometers
+    pub const CIRCUMFERENCE: u32 = 40075;
     pub const CONTINENT_MAX_SIZE_FACTOR: f32 = 8.7;
     pub const CONTINENT_MIN_SIZE_FACTOR: f32 = 5.7;
     pub const MAX_ALTITUDE: f32 = 15000.0;
@@ -138,6 +111,12 @@ impl World {
     pub const RAINFALL_SPAN: f32 = World::MAX_RAINFALL - World::MIN_RAINFALL;
     pub const TEMPERATURE_ALTITUDE_FACTOR: f32 = 2.05;
     pub const TEMPERATURE_SPAN: f32 = World::MAX_TEMPERATURE - World::MIN_TEMPERATURE;
+
+    #[must_use]
+    #[inline(always)]
+    pub fn cell_max_widht(&self) -> f32 {
+        self.width as f32 / World::CIRCUMFERENCE as f32
+    }
 
     pub fn new(width: u32, height: u32, seed: u32) -> World {
         World {

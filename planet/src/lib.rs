@@ -1,6 +1,9 @@
 pub mod human_group;
+pub use human_group::HumanGroup;
+pub mod terrain_cell;
+pub use terrain_cell::TerrainCell;
 pub mod world;
-pub use world::{TerrainCell, World, WorldGenError};
+pub use world::{World, WorldGenError};
 pub mod biome;
 pub use biome::{BiomeStats, BiomeType};
 pub mod world_manager;

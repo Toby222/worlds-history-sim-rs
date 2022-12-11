@@ -23,11 +23,6 @@ version = "1.0"
 default-features = false
 features = ["derive"]
 
-[dependencies.postcard]
-version = "1.0.2"
-default-features = false
-features = ["use-std"]
-
 [dependencies.crossbeam-channel]
 version = "0.5.6"
 default-features = false
