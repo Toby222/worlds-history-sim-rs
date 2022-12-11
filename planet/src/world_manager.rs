@@ -1,3 +1,5 @@
+use std::io::{Write, BufReader};
+
 use {
     crate::{World, WorldGenError},
     bevy::{
@@ -12,7 +14,7 @@ use {
         error::Error,
         fmt::Display,
         fs::File,
-        io::{self, Read, Write},
+        io::{self, BufWriter},
         path::Path,
     },
 };
@@ -20,7 +22,7 @@ use {
 #[derive(Debug)]
 pub enum LoadError {
     MissingSave(io::Error),
-    InvalidSave(postcard::Error),
+    InvalidSave(bincode::Error),
 }
 impl Error for LoadError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
@@ -29,15 +31,8 @@ impl Error for LoadError {
             LoadError::InvalidSave(error) => Some(error),
         }
     }
-
-    fn description(&self) -> &str {
-        "description() is deprecated; use Display"
-    }
-
-    fn cause(&self) -> Option<&dyn Error> {
-        self.source()
-    }
 }
+
 impl Display for LoadError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
@@ -53,7 +48,7 @@ impl Display for LoadError {
 #[derive(Debug)]
 pub enum SaveError {
     MissingWorld,
-    SerializationError(postcard::Error),
+    SerializationError(bincode::Error),
     FailedToWrite(io::Error),
 }
 impl Error for SaveError {
@@ -103,32 +98,31 @@ impl WorldManager {
             return Err(SaveError::MissingWorld);
         };
 
-        let serialized = match postcard::to_stdvec(world) {
-            Ok(serialized) => serialized,
-            Err(err) => {
-                return Err(SaveError::SerializationError(err));
-            },
+        let save_file = match File::create(path) {
+            Ok(save_file) => save_file,
+            Err(err) => return Err(SaveError::FailedToWrite(err)),
         };
 
-        match File::create(path).unwrap().write_all(serialized.as_slice()) {
+        let serialized = match bincode::serialize(world) {
+            Ok(serialized) => serialized,
+            Err(err) => return Err(SaveError::SerializationError(err)),
+        };
+
+        match BufWriter::new(save_file).write(serialized.as_slice()) {
             Ok(_) => Ok(()),
             Err(err) => Err(SaveError::FailedToWrite(err)),
         }
     }
 
     pub fn load_world<P: AsRef<Path>>(&mut self, path: P) -> Result<(), LoadError> {
-        let mut file = match File::open(path) {
+        let file = match File::open(path) {
             Ok(file) => file,
             Err(err) => {
                 return Err(LoadError::MissingSave(err));
             },
         };
-        let mut buf = vec![];
-        if let Err(err) = file.read_to_end(&mut buf) {
-            return Err(LoadError::MissingSave(err));
-        };
-
-        match postcard::from_bytes(buf.as_slice()) {
+        
+        match bincode::deserialize_from(BufReader::new(file)) {
             Ok(world) => {
                 self.world = Some(world);
                 Ok(())
@@ -142,6 +136,11 @@ impl WorldManager {
         self.world.as_ref()
     }
 
+    #[must_use]
+    pub fn get_world_mut(&mut self) -> Option<&mut World> {
+        self.world.as_mut()
+    }
+
     pub fn set_world(&mut self, world: World) {
         self.world = Some(world);
     }
@@ -153,7 +152,7 @@ impl WorldManager {
     ) -> Task<Result<World, WorldGenError>> {
         AsyncComputeTaskPool::get().spawn(async move {
             let seed = seed.unwrap_or_else(random);
-            let mut new_world = World::async_new(
+            let mut new_world = World::new(
                 WorldManager::NEW_WORLD_WIDTH,
                 WorldManager::NEW_WORLD_HEIGHT,
                 seed,

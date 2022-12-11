@@ -232,11 +232,11 @@ fn update_gui(world: &mut World) {
 #[cfg(feature = "render")]
 fn redraw_map(
     mut should_redraw: ResMut<ShouldRedraw>,
-    world_manager: Res<WorldManager>,
     mut world_renderer: ResMut<WorldRenderer>,
-    render_settings: Res<WorldRenderSettings>,
     mut images: ResMut<Assets<Image>>,
     mut map_sprite: Query<&mut Sprite>,
+    render_settings: Res<WorldRenderSettings>,
+    world_manager: Res<WorldManager>,
 ) {
     let Some(world) = world_manager.get_world() else {
         #[cfg(feature = "logging")]
@@ -278,6 +278,12 @@ fn redraw_map(
     }
 }
 
+fn iterate_world(mut world_manager: ResMut<WorldManager>) {
+    if let Some(world) = world_manager.get_world_mut() {
+        world.iterate();
+    };
+}
+
 #[cfg(feature = "render")]
 const WORLD_SCALE: i32 = 4;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -303,7 +309,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .add_system(update_gui)
             .add_system(update_cursor_map_position)
             .add_system(open_tile_info)
-            .add_system(redraw_map);
+            .add_system(redraw_map)
+            .add_system(iterate_world);
 
         app.add_plugins(WorldPlugins);
     }

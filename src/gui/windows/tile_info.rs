@@ -44,6 +44,9 @@ impl WindowSystem for TileInfo<'_, '_> {
                         ..
                     } = &world.terrain[cursor_y as usize][cursor_x as usize];
 
+                    _ = ui.label("Iteration");
+                    _ = ui.label(format!("{}", world.iteration));
+                    ui.end_row();
                     _ = ui.label("Coordinates");
                     _ = ui.label(format!("{x}:{y}"));
                     ui.end_row();

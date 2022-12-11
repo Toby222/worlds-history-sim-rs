@@ -39,13 +39,13 @@ impl WorldRenderSettings {
     pub fn toggle_overlay(&mut self, overlay: &WorldOverlay) {
         if self.visible_overlays.contains(overlay) {
             assert!(
-                    self.visible_overlays.remove(overlay),
-            "Failed to remove overlay [{overlay:#?}], that shouldn't happen."
+                self.visible_overlays.remove(overlay),
+                "Failed to remove overlay [{overlay:#?}], that shouldn't happen."
             );
         } else {
             assert!(
-                    self.visible_overlays.insert(*overlay),
-            "Failed to insert overlay [{overlay:#?}], that shouldn't happen."
+                self.visible_overlays.insert(*overlay),
+                "Failed to insert overlay [{overlay:#?}], that shouldn't happen."
             );
         }
     }
@@ -53,38 +53,25 @@ impl WorldRenderSettings {
 
 #[must_use]
 fn population_color(world: &World, cell: &TerrainCell) -> Color {
-    let slant = world.get_slant(cell);
-    let altitude_difference = world.max_altitude - world.min_altitude;
+    let cell_population = cell
+        .human_groups
+        .iter()
+        .map(|group| group.population)
+        .sum::<u32>();
 
-    let slant_factor = f32::min(1.0, (4.0 + (10.0 * slant / altitude_difference)) / 5.0);
-
-    let altitude_factor = f32::min(1.0, (0.5 + ((cell.altitude - altitude_difference) / altitude_difference)) / 1.5);
-
-    let mut total_population = 0;
-
-    for human_group in cell.human_groups {
-        total_population += human_group.population;
-    }
-
-    let color = if total_population > 0 {
+    if cell_population > 0 {
+        debug!(cell.x, cell.y, "Population present");
         Color::GREEN
     } else {
         let color = biome_color(world, cell);
 
-        let greyscale = (color.r() + color.g() + color.b()) / 4.5 + 0.25;
+        let grey = color.r() + color.g() + color.b();
+        let r = (color.r() + grey) / 6.0;
+        let g = (color.g() + grey) / 6.0;
+        let b = (color.b() + grey) / 6.0;
 
-        color.set_r(greyscale);
-        color.set_g(greyscale);
-        color.set_b(greyscale);
-
-        color
-    };
-
-    let r = color.r() * slant_factor * altitude_factor;
-    let g = color.g() * slant_factor * altitude_factor;
-    let b = color.b() * slant_factor * altitude_factor;
-
-    Color::rgb(r, g, b)
+        Color::rgb(r, g, b)
+    }
 }
 
 #[must_use]
@@ -221,6 +208,7 @@ impl WorldRenderer {
             WorldView::Biomes => 0,
             WorldView::Topography => 1,
             WorldView::Coastlines => 2,
+            WorldView::Population => 3,
         };
         let mut overlay_num = 0;
         for overlay in render_settings.visible_overlays.iter() {
@@ -292,6 +280,7 @@ impl WorldRenderer {
             WorldView::Biomes => biome_color(world, cell),
             WorldView::Topography => altitude_contour_color(world, cell.altitude),
             WorldView::Coastlines => coastline_color(world, cell),
+            WorldView::Population => population_color(world, cell),
         };
         let mut normalizer = 1.0;
 

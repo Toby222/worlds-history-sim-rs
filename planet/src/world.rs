@@ -10,6 +10,7 @@ use {
         perlin,
         BiomeStats,
         BiomeType,
+        HumanGroup,
         TerrainCell,
     },
     bevy::{
@@ -20,11 +21,12 @@ use {
     },
     crossbeam_channel::Sender,
     rand::{rngs::StdRng, Rng, SeedableRng},
-    serde::{Deserialize, Serialize},
+    serde::Serialize,
     std::{
         error::Error,
         f32::consts::{PI, TAU},
         fmt::{Debug, Display},
+        sync::{Arc, Weak},
     },
 };
 
@@ -91,6 +93,9 @@ pub struct World {
     #[serde(skip)]
     pub rng:               StdRng,
     pub iteration:         usize,
+
+    #[serde(skip)]
+    pub human_groups_to_update: Vec<Weak<HumanGroup>>,
 }
 
 impl World {
@@ -114,7 +119,7 @@ impl World {
 
     #[must_use]
     #[inline(always)]
-    pub fn cell_max_widht(&self) -> f32 {
+    pub fn cell_max_width(&self) -> f32 {
         self.width as f32 / World::CIRCUMFERENCE as f32
     }
 
@@ -134,25 +139,7 @@ impl World {
             min_temperature: World::MAX_TEMPERATURE,
             rng: StdRng::seed_from_u64(seed as u64),
             iteration: 0,
-        }
-    }
-
-    pub fn async_new(width: u32, height: u32, seed: u32) -> World {
-        World {
-            width,
-            height,
-            seed,
-            terrain: vec![vec![default(); width.try_into().unwrap()]; height.try_into().unwrap()],
-            continent_offsets: [default(); World::NUM_CONTINENTS as usize],
-            continent_sizes: [default(); World::NUM_CONTINENTS as usize],
-            max_altitude: World::MIN_ALTITUDE,
-            min_altitude: World::MAX_ALTITUDE,
-            max_rainfall: World::MIN_RAINFALL,
-            min_rainfall: World::MAX_RAINFALL,
-            max_temperature: World::MIN_TEMPERATURE,
-            min_temperature: World::MAX_TEMPERATURE,
-            rng: StdRng::seed_from_u64(seed as u64),
-            iteration: 0,
+            human_groups_to_update: default(),
         }
     }
 
@@ -175,6 +162,9 @@ impl World {
 
         send_progress(progress_sender, 0.0, "Generating biomes");
         self.generate_biomes(progress_sender);
+
+        send_progress(progress_sender, 0.0, "Populating world");
+        self.set_initial_human_groups(progress_sender);
 
         Ok(())
     }
@@ -419,8 +409,10 @@ impl World {
                     self.min_altitude = altitude;
                 }
 
-                self.terrain[y][x].x = x;
-                self.terrain[y][x].y = y;
+                self.terrain[y][x].x = x as u32;
+                self.terrain[y][x].y = y as u32;
+                self.terrain[y][x].height = f32::sin(alpha) * self.cell_max_width();
+                self.terrain[y][x].width = self.cell_max_width();
             }
         }
         info!("Done generating altitude");
@@ -502,10 +494,10 @@ impl World {
                 let latitude_modifier_2 = f32::cos(latitude_factor);
 
                 let offset_cell_x_1 =
-                    (width + x + f32::floor(latitude_modifier_2 * width as f32 / 20.0) as usize)
+                    (width + x + f32::floor(latitude_modifier_2 * width as f32 / 40.0) as usize)
                         % width;
                 let offset_cell_x_2 =
-                    (width + x + f32::floor(latitude_modifier_2 * width as f32 / 15.0) as usize)
+                    (width + x + f32::floor(latitude_modifier_2 * width as f32 / 20.0) as usize)
                         % width;
                 let offset_cell_x_3 =
                     (width + x + f32::floor(latitude_modifier_2 * width as f32 / 10.0) as usize)
@@ -540,7 +532,7 @@ impl World {
                     - (offset_altitude_3 * 0.5)
                     - (offset_altitude_4 * 0.4)
                     - (offset_altitude_5 * 0.5)
-                    + (World::MAX_ALTITUDE * 0.18 * random_noise_2)
+                    + (World::MAX_ALTITUDE * 0.17 * random_noise_2)
                     - (altitude_value * 0.25))
                     / World::MAX_ALTITUDE;
 
@@ -734,8 +726,11 @@ impl World {
     }
 
     #[must_use]
-    pub fn cell_neighbors(&self, x: usize, y: usize) -> HashMap<CompassDirection, &TerrainCell> {
+    pub fn cell_neighbors(&self, x: u32, y: u32) -> HashMap<CompassDirection, &TerrainCell> {
         let mut neighbors = HashMap::new();
+
+        let x = x as usize;
+        let y = y as usize;
 
         let height = self.height as usize;
         let width = self.width as usize;
@@ -909,6 +904,63 @@ impl World {
             }
         }
         return false;
+    }
+
+    fn set_initial_human_groups(&mut self, progress_sender: &Sender<(f32, String)>) -> () {
+        const MAX_GROUPS: u8 = 5;
+        const MINIMUM_PRESENCE: f32 = 0.1;
+
+        let mut placed_groups = 0;
+        let mut tries = 0;
+        while placed_groups < MAX_GROUPS {
+            tries += 1;
+            send_progress(
+                progress_sender,
+                placed_groups as f32 / MAX_GROUPS as f32,
+                format!("Placing initial population: {placed_groups}/{MAX_GROUPS} (try #{tries})"),
+            );
+
+            let x = self.rng.gen_range(0..self.width as usize);
+            let y = self.rng.gen_range(0..self.height as usize);
+
+            let grassland_presence = self.terrain[y][x].biome_presence(BiomeType::Grassland);
+
+            match grassland_presence {
+                Some(presence) => {
+                    if presence < MINIMUM_PRESENCE {
+                        continue;
+                    }
+                },
+                None => continue,
+            }
+
+            let new_human_group = Arc::new(HumanGroup {
+                id:         placed_groups as u32,
+                population: 1000,
+            });
+
+            self.human_groups_to_update
+                .push(Arc::<HumanGroup>::downgrade(&new_human_group));
+            self.terrain[y][x].human_groups.push(new_human_group);
+
+            placed_groups += 1;
+            tries = 0;
+        }
+    }
+
+    pub fn iterate(&mut self) {
+        for group in self.human_groups_to_update.iter() {
+            if let Some(group) = group.upgrade() {
+                group.update(self);
+            }
+        }
+        self.human_groups_to_update.clear();
+        self.iteration += 1;
+    }
+
+    #[inline(always)]
+    pub fn add_human_group_to_update(&mut self, group: Weak<HumanGroup>) {
+        self.human_groups_to_update.push(group);
     }
 }
 

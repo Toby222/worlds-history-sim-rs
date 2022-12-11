@@ -1,6 +1,6 @@
 use {
     crate::{TerrainCell, World},
-    bevy::prelude::debug,
+    bevy::{prelude::debug, utils::default},
     rand::{rngs::StdRng, SeedableRng},
     serde::{
         de::{Error, MapAccess, SeqAccess, Visitor},
@@ -137,6 +137,7 @@ impl<'de> Deserialize<'de> for World {
 
                     rng: StdRng::seed_from_u64(seed as u64),
                     iteration,
+                    human_groups_to_update: default(),
                 };
                 {
                     let mut y = 0;
@@ -219,10 +220,10 @@ impl<'de> Deserialize<'de> for World {
                 let mut terrain: Vec<Vec<TerrainCell>> =
                     terrain.ok_or_else(|| Error::missing_field("terrain"))?;
 
-                for x in 0..width as usize {
-                    for y in 0..height as usize {
-                        terrain[y][x].x = x;
-                        terrain[y][x].y = y;
+                for x in 0..width as u32 {
+                    for y in 0..height as u32 {
+                        terrain[y as usize][x as usize].x = x;
+                        terrain[y as usize][x as usize].y = y;
                     }
                 }
 
@@ -279,6 +280,7 @@ impl<'de> Deserialize<'de> for World {
 
                     rng: StdRng::seed_from_u64(seed as u64),
                     iteration,
+                    human_groups_to_update: default(),
                 };
                 {
                     let mut y = 0;
